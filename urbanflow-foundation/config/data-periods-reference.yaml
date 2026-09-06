@@ -34,3 +34,12 @@ notes: |
   Once selected, record and freeze them here.
   The fixture data uses a representative replay date of 2025-01-06
   (Monday) for the reference expected-result calculations.
+
+source_data:
+  description: "Public NYC TLC Trip Record Data. No account required."
+  landing_page: "https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page"
+  yellow_trips_parquet: "https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_YYYY-MM.parquet"
+  zone_lookup_csv: "https://d37ci6vzurychx.cloudfront.net/misc/taxi_zone_lookup.csv"
+  zone_boundaries_shapefile: "https://d37ci6vzurychx.cloudfront.net/misc/taxi_zones.zip"
+  zone_boundaries_geojson: "https://data.cityofnewyork.us/api/geospatial/d3c5-ddgc?method=export&format=GeoJSON"
+  yellow_trips_data_dictionary: "https://www.nyc.gov/assets/tlc/downloads/pdf/data_dictionary_trip_records_yellow.pdf"

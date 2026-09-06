@@ -1,8 +1,7 @@
 # UrbanFlow — Big Data Analytics Demo
 
-An educational Big Data engineering demonstration: a large historical mobility
-dataset at rest plus a high-rate event stream in motion, moving through one
-pipeline.
+A teaching demo of one full Big Data pipeline, built on public
+[**NYC TLC taxi-trip records (https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page)**](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page).
 
 ```text
 Data Sources -> Ingestion -> Storage -> Processing -> Analytics
@@ -10,46 +9,107 @@ Data Sources -> Ingestion -> Storage -> Processing -> Analytics
 
 **Foundation version:** 1.0.0
 
-## Codebases
+## What it does
 
-| Codebase | Role |
+Two kinds of data, one pipeline:
+
+```text
+Big history at rest   -> Volume
+Fast event stream     -> Velocity
+Parquet/JSON/CSV/GeoJSON -> Variety
+```
+
+Three questions:
+
+```text
+History:  what normally happens in this zone at this time?
+Live:     what is happening there right now?
+Compare:  is right now unusual vs history?
+```
+
+The score is a simple **demand ratio = current trip count / historical mean**
+(z-score kept as a secondary, nullable metric).
+
+## The four codebases
+
+```text
+                 NYC taxi source data
+                          |
+                   [ urbanflow-batch ]  (Spark)
+                    Bronze -> Silver -> Gold
+                    |                     |
+             Silver trips           Gold historical
+                    |                     |
+          [ urbanflow-replay ]            |
+           Silver -> Kafka                |
+           (Python + Kafka)               |
+                    |                     |
+                  Kafka  --------> [ urbanflow-streaming ]  (Spark Structured
+                                    Kafka + Gold historical  Streaming + Streamlit)
+                                    -> Gold live -> app
+```
+
+| Codebase | What it is |
 |---|---|
-| [urbanflow-foundation/](urbanflow-foundation/) | Contract-first governance: schemas, time/path semantics, fixtures, acceptance tests. Not an importable library. |
-| [urbanflow-batch/](urbanflow-batch/) | A — Bronze -> Silver -> historical Gold baseline. |
-| [urbanflow-replay/](urbanflow-replay/) | B — Silver -> rate-controlled Kafka trip events. |
-| [urbanflow-streaming/](urbanflow-streaming/) | C — Kafka + historical Gold -> live Gold -> analytics app. |
+| [urbanflow-foundation/](urbanflow-foundation/README.md) | Shared rules: schemas, time/path meaning, small fixtures, acceptance tests. No code the others import. |
+| [urbanflow-batch/](urbanflow-batch/README.md) | A — cleans raw taxi data into Silver trips and the historical Gold baseline. |
+| [urbanflow-replay/](urbanflow-replay/README.md) | B — replays Silver trips as a paced Kafka event stream. |
+| [urbanflow-streaming/](urbanflow-streaming/README.md) | C — joins the live stream with history into live Gold metrics + an analytics app. |
 
-A, B and C are independently buildable and share contracts, not implementation
-code. During independent development they use Foundation fixtures in place of
-unfinished upstream subprojects.
+A, B and C are built and tested on their own machines. They never import each
+other; they meet only at **Parquet/S3A datasets and Kafka events** whose meaning
+is frozen in `urbanflow-foundation` 1.0.0. Before an upstream codebase is ready,
+each one runs on Foundation fixtures instead.
 
-Full detail lives in
-[docs/UrbanFlow_Proposal_and_Development_Guide_2026-09-06.md](docs/UrbanFlow_Proposal_and_Development_Guide_2026-09-06.md);
-cross-codebase contracts live in
-[urbanflow-foundation/README.md](urbanflow-foundation/README.md). This file
-does not restate either — it is the entry point only.
+More detail: each subproject README, the guides in [docs/](docs/), and
+contracts in [urbanflow-foundation/README.md](urbanflow-foundation/README.md).
 
-## Prerequisites
+## Data
 
-### 0. Foundation check (no infrastructure required)
+All source data is public NYC TLC data — no account, free to download.
 
-Run this first. It needs only Python 3.13 and the standard library.
+| What | Link | Format |
+|---|---|---|
+| Dataset home + docs | https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page | — |
+| Yellow taxi trips (monthly) | `https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_YYYY-MM.parquet` | Parquet |
+| Taxi-zone lookup | https://d37ci6vzurychx.cloudfront.net/misc/taxi_zone_lookup.csv | CSV |
+| Taxi-zone shapes | https://d37ci6vzurychx.cloudfront.net/misc/taxi_zones.zip | Shapefile (ZIP) |
+| Taxi-zone shapes (GeoJSON) | https://data.cityofnewyork.us/api/geospatial/d3c5-ddgc?method=export&format=GeoJSON | GeoJSON |
+| Field meanings (yellow) | https://www.nyc.gov/assets/tlc/downloads/pdf/data_dictionary_trip_records_yellow.pdf | PDF |
+
+```text
+yellow_tripdata_YYYY-MM.parquet  one file per month, e.g. yellow_tripdata_2023-01.parquet
+   tpep_pickup_datetime, tpep_dropoff_datetime   trip start / end time
+   PULocationID, DOLocationID                    pickup / dropoff zone id (join to taxi_zone_lookup.csv)
+   trip_distance, passenger_count, fare_amount, total_amount
+```
+
+Start small: 1–3 months (e.g. `2023-01` to `2023-03`) is enough to build and
+test the whole pipeline. History and replay must use **different** date ranges.
+Usage details: [urbanflow-batch/README.md](urbanflow-batch/README.md) and
+`docs/UrbanFlow_urbanflow-batch_Subproject_Overview_Architecture_and_Development_Guide_2026-09-06.md`.
+
+## Setup
+
+### 0. Foundation check — no infrastructure needed
+
+Needs only Python 3.13 and the standard library. Run this first.
 
 ```bash
 cd urbanflow-foundation
 python checks/validate_contract_fixtures.py
 ```
 
-Expected:
+Expect:
 
 ```text
 FOUNDATION FIXTURES = PASS
 ```
 
-### 1. SeaweedFS — S3-compatible object storage (Docker on Windows)
+### 1. SeaweedFS — S3-compatible storage (Docker, Windows)
 
-The S3 API must be enabled explicitly; the image does not start it by default.
-Port 8333 is the S3 endpoint, 9333 the master, 8888 the filer.
+Enable the S3 API explicitly — the image does not. Ports: 8333 S3, 9333 master,
+8888 filer.
 
 ```powershell
 docker run -d --name urbanflow-seaweedfs `
@@ -59,23 +119,22 @@ docker run -d --name urbanflow-seaweedfs `
   server -dir=/data -s3
 ```
 
-Create the frozen bucket (`urbanflow`, per
+Create the bucket (`urbanflow`, per
 `urbanflow-foundation/contracts/storage-paths.yaml`):
 
 ```bash
 aws s3api create-bucket --bucket urbanflow --endpoint-url http://localhost:8333
 ```
 
-The image tag above is the **candidate** from the development guide, not a
-validated version. Pin the exact tag that passes the Spark <-> SeaweedFS
-Parquet round-trip (acceptance test E) in `docs/environment-lock.md`, together
-with the resolved Hadoop / `hadoop-aws` / AWS SDK versions. Credentials belong
-in environment variables, per
-`urbanflow-foundation/config/config-reference.yaml` — never in source.
+The `4.45` tag is a candidate, not validated. Pin the tag that passes the
+Spark <-> SeaweedFS Parquet round-trip (acceptance test E) in
+`docs/environment-lock.md`, along with the Hadoop / `hadoop-aws` / AWS SDK
+versions. Keep credentials in environment variables (see
+`urbanflow-foundation/config/config-reference.yaml`), never in source.
 
 ### 2. Kafka (Confluent Platform, WSL Ubuntu)
 
-Start the broker in KRaft mode, then create the frozen topic:
+Start the broker in KRaft mode, then create the topic:
 
 ```bash
 kafka-topics --create \
@@ -85,32 +144,29 @@ kafka-topics --create \
   --bootstrap-server localhost:9092
 ```
 
-Topic name, partition count and replication factor are frozen in
-`urbanflow-foundation/contracts/kafka-topic.yaml` — do not vary them per
-machine. Record the broker start command your Confluent Platform version
-actually uses in `docs/environment-lock.md`.
+Topic name, partitions and replication factor are frozen in
+`urbanflow-foundation/contracts/kafka-topic.yaml` — do not change them per
+machine. Record your broker start command in `docs/environment-lock.md`.
 
 ### 3. Record the environment lock
 
-After the smoke tests in
-`urbanflow-foundation/docs/acceptance-tests.md` pass, fill in
-`docs/environment-lock.md` from the template in
-`urbanflow-foundation/docs/environment-baseline.md`. Record the combination
-that actually worked, not the intended versions.
+After the smoke tests in `urbanflow-foundation/docs/acceptance-tests.md` pass,
+fill `docs/environment-lock.md` from the template in
+`urbanflow-foundation/docs/environment-baseline.md`. Record what actually
+worked, not what was intended.
 
-## Acceptance tests and GO gates
+## Gates
 
-| Gate | Meaning |
-|---|---|
-| FOUNDATION-GO | Test 0 passes, contracts frozen |
-| GO-A / GO-B / GO-C | That subproject's local prerequisites and fixtures work |
-| INTEGRATION-GO | Tests H, I, J, K pass and the environment lock is complete |
+```text
+FOUNDATION-GO   Test 0 passes, contracts frozen
+GO-A/B/C        that subproject's local setup + fixtures work
+INTEGRATION-GO  tests H, I, J, K pass and the environment lock is filled
+```
 
 Definitions: `urbanflow-foundation/docs/acceptance-tests.md`.
 
 ## Change control
 
-Foundation contracts are frozen. A change affecting more than one subproject is
-made in `urbanflow-foundation` first, versioned there, then adopted by the
-affected producer and consumer. See
-`urbanflow-foundation/docs/change-control.md`.
+Foundation contracts are frozen. A change touching more than one subproject goes
+into `urbanflow-foundation` first, gets a new version there, then is adopted by
+the producer and consumer. See `urbanflow-foundation/docs/change-control.md`.

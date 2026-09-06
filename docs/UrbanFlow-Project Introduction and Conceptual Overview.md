@@ -130,6 +130,15 @@ Variety
     Parquet + JSON + CSV + GeoJSON/geographic data
 ```
 
+### Source data
+
+The historical dataset is the public **NYC TLC Trip Record Data**
+(<https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page>) — Yellow-taxi
+monthly Parquet files — together with the taxi-zone lookup table (CSV) and
+taxi-zone boundaries (shapefile / GeoJSON) as reference data. Concrete download
+links are listed in `UrbanFlow_urbanflow-batch_Subproject_Overview_Architecture_and_Development_Guide_2026-09-06.md`
+(§1.3 and §3.1) and in Gate 7 of `UrbanFlow_Proposal_and_Development_Guide_2026-09-06.md`.
+
 ---
 
 ## 5. Key Ideas
