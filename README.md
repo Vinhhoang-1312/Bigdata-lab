@@ -92,7 +92,8 @@ yellow_tripdata_YYYY-MM.parquet  one file per month, e.g. yellow_tripdata_2023-0
 ```
 
 Start small: 1–3 months (e.g. `2023-01` to `2023-03`) is enough to build and
-test the whole pipeline. History and replay must use **different** date ranges.
+test the whole pipeline. The frozen integrated split uses **January 2023 for
+history** and **February 2023 for replay**, so the ranges do not overlap.
 Usage details: [urbanflow-batch/README.md](urbanflow-batch/README.md) and
 `docs/UrbanFlow_urbanflow-batch_Subproject_Overview_Architecture_and_Development_Guide_2026-09-06.md`.
 

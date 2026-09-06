@@ -99,7 +99,7 @@ The `tpep_*` field prefix in the source schema denotes Yellow-taxi (TPEP)
 records. Green-taxi (`lpep_*`) files are available from the same landing page if
 a second trip type is wanted for the Variety demonstration.
 
-The exact historical and replay periods are intentionally kept separate. The concrete dates should be frozen only after real source data is acquired and inspected.
+The integrated periods were frozen after real-data inspection: January 1–31, 2023 is historical, and February 1–28, 2023 is held out for replay. They do not overlap; the authoritative lock is `urbanflow-foundation/config/data-periods-reference.yaml`.
 
 ### 1.4 Overall architecture
 

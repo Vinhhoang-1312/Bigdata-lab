@@ -4,6 +4,11 @@ x-spark-image: &spark-image apache/spark:4.2.0-python3
 x-spark-common: &spark-common
   image: *spark-image
   restart: unless-stopped
+  environment:
+    AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:?Copy .env.example to .env}
+    AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:?Copy .env.example to .env}
+    AWS_REGION: us-east-1
+    PYTHONPATH: /workspace/urbanflow-batch
   networks:
     - urbanflow
 
@@ -15,6 +20,23 @@ services:
     volumes:
       - ./:/workspace:ro
     command: ["python", "checks/validate_contract_fixtures.py"]
+    profiles: ["tools"]
+
+  batch-python:
+    image: python:3.13.11-slim-bookworm
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    working_dir: /workspace
+    volumes:
+      - ./:/workspace
+    networks:
+      - urbanflow
+    command:
+      - python
+      - /workspace/urbanflow-batch/batch/source_acquisition.py
+      - --period
+      - 2023-01
+      - --period
+      - 2023-02
     profiles: ["tools"]
 
   seaweedfs:
@@ -99,6 +121,8 @@ services:
       - spark://spark-master:7077
     ports:
       - "8081:8081"
+    volumes:
+      - ./:/workspace:ro
     mem_limit: 1g
     cpus: 2.0
 
@@ -120,6 +144,8 @@ services:
       - spark://spark-master:7077
     ports:
       - "8082:8082"
+    volumes:
+      - ./:/workspace:ro
     mem_limit: 1g
     cpus: 2.0
 
@@ -131,6 +157,7 @@ services:
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:?Copy .env.example to .env}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:?Copy .env.example to .env}
       AWS_REGION: us-east-1
+      PYTHONPATH: /workspace/urbanflow-batch
     volumes:
       - ./:/workspace
       - spark-ivy:/root/.ivy2
@@ -152,7 +179,7 @@ services:
       - spark.hadoop.fs.s3a.path.style.access=true
       - --conf
       - spark.hadoop.fs.s3a.connection.ssl.enabled=false
-    command: ["--master", "local[2]", "/workspace/docker/spark/s3a_smoke_test.py"]
+    command: ["--master", "local[2]", "/workspace/tests/infrastructure/spark_s3a_smoke.py"]
     mem_limit: 3g
     cpus: 2.0
     profiles: ["tools"]

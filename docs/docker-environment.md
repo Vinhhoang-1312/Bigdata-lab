@@ -61,11 +61,17 @@ docker compose logs -f spark-master spark-worker-1 spark-worker-2
 docker compose logs -f seaweedfs
 ```
 
+Download the frozen Batch source months with containerized Python 3.13:
+
+```bash
+docker compose run --rm batch-python
+```
+
 Run local Spark validation:
 
 ```bash
 docker compose run --rm spark-submit \
-  --master 'local[2]' /workspace/docker/spark/local_smoke_test.py
+  --master 'local[2]' /workspace/tests/infrastructure/spark_local_smoke.py
 ```
 
 Run a job on the two-worker cluster:
@@ -75,7 +81,7 @@ docker compose run --rm spark-submit \
   --master spark://spark-master:7077 \
   --executor-memory 512m \
   --total-executor-cores 4 \
-  /workspace/docker/spark/local_smoke_test.py
+  /workspace/tests/infrastructure/spark_local_smoke.py
 ```
 
 Run the Spark/SeaweedFS Parquet round trip:

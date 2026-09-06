@@ -56,6 +56,14 @@ changed: every contract schema, path, frozen value, and null rule is unchanged.
 - `docs/acceptance-tests.md` — added Test K for the analytics app and restored
   the fixture-readable preconditions to the GO table.
 
+### Operational lock completed
+
+- `config/data-periods-reference.yaml` — froze January 1–31, 2023 as the
+  historical period and February 1–28, 2023 as the non-overlapping replay
+  period after both monthly files passed real-data Silver inspection. This
+  fills the planned operational template; no schema or producer/consumer
+  interface changed.
+
 ### Added
 
 - Initial Foundation release.
