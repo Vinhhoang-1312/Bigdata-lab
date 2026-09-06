@@ -4,6 +4,15 @@
 **Foundation baseline:** `urbanflow-foundation` 1.0.0
 **Primary technologies:** Apache Spark Structured Streaming, Kafka, SeaweedFS/S3A, Parquet, Streamlit
 
+## Full documentation
+
+See
+[docs/UrbanFlow_urbanflow-streaming_Subproject_Overview_Architecture_and_Development_Guide_2026-09-06.md](../docs/UrbanFlow_urbanflow-streaming_Subproject_Overview_Architecture_and_Development_Guide_2026-09-06.md)
+for the functional specification, architecture, and development guide.
+
+Cross-codebase contracts: [../urbanflow-foundation/README.md](../urbanflow-foundation/README.md).
+Project entry point: [../README.md](../README.md).
+
 ## Overview
 
 `urbanflow-streaming` is the live end of UrbanFlow. It consumes the replayed
@@ -39,12 +48,3 @@ boundary GeoJSON
 (<https://data.cityofnewyork.us/api/geospatial/d3c5-ddgc?method=export&format=GeoJSON>)
 are useful for labelling zones in the analytics app. Full list: the guide
 below, §1.3.
-
-## Full documentation
-
-See
-[docs/UrbanFlow_urbanflow-streaming_Subproject_Overview_Architecture_and_Development_Guide_2026-09-06.md](../docs/UrbanFlow_urbanflow-streaming_Subproject_Overview_Architecture_and_Development_Guide_2026-09-06.md)
-for the functional specification, architecture, and development guide.
-
-Cross-codebase contracts: [../urbanflow-foundation/README.md](../urbanflow-foundation/README.md).
-Project entry point: [../README.md](../README.md).

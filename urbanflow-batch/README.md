@@ -4,6 +4,15 @@
 **Foundation baseline:** `urbanflow-foundation` 1.0.0
 **Primary technologies:** Apache Spark, SeaweedFS/S3A, Parquet
 
+## Full documentation
+
+See
+[docs/UrbanFlow_urbanflow-batch_Subproject_Overview_Architecture_and_Development_Guide_2026-09-06.md](../docs/UrbanFlow_urbanflow-batch_Subproject_Overview_Architecture_and_Development_Guide_2026-09-06.md)
+for the functional specification, architecture, and development guide.
+
+Cross-codebase contracts: [../urbanflow-foundation/README.md](../urbanflow-foundation/README.md).
+Project entry point: [../README.md](../README.md).
+
 ## Overview
 
 `urbanflow-batch` builds the historical, at-rest side of UrbanFlow. It ingests
@@ -37,12 +46,3 @@ taxi-zone boundaries
 (<https://d37ci6vzurychx.cloudfront.net/misc/taxi_zones.zip> /
 <https://data.cityofnewyork.us/api/geospatial/d3c5-ddgc?method=export&format=GeoJSON>).
 Full list and usage: the guide below, §1.3 and §3.1.
-
-## Full documentation
-
-See
-[docs/UrbanFlow_urbanflow-batch_Subproject_Overview_Architecture_and_Development_Guide_2026-09-06.md](../docs/UrbanFlow_urbanflow-batch_Subproject_Overview_Architecture_and_Development_Guide_2026-09-06.md)
-for the functional specification, architecture, and development guide.
-
-Cross-codebase contracts: [../urbanflow-foundation/README.md](../urbanflow-foundation/README.md).
-Project entry point: [../README.md](../README.md).

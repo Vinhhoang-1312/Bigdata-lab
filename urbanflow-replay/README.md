@@ -4,6 +4,15 @@
 **Foundation baseline:** `urbanflow-foundation` 1.0.0
 **Primary technologies:** Python, Apache Kafka
 
+## Full documentation
+
+See
+[docs/UrbanFlow_urbanflow-replay_Subproject_Overview_Architecture_and_Development_Guide_2026-09-06.md](../docs/UrbanFlow_urbanflow-replay_Subproject_Overview_Architecture_and_Development_Guide_2026-09-06.md)
+for the functional specification, architecture, and development guide.
+
+Cross-codebase contracts: [../urbanflow-foundation/README.md](../urbanflow-foundation/README.md).
+Project entry point: [../README.md](../README.md).
+
 ## Overview
 
 `urbanflow-replay` turns the historical Silver dataset back into a high-rate
@@ -35,12 +44,3 @@ raw files. That Silver derives from the public **NYC TLC Trip Record Data**
 monthly Parquet at
 `https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_YYYY-MM.parquet`).
 Full list: the guide below, §1.3.
-
-## Full documentation
-
-See
-[docs/UrbanFlow_urbanflow-replay_Subproject_Overview_Architecture_and_Development_Guide_2026-09-06.md](../docs/UrbanFlow_urbanflow-replay_Subproject_Overview_Architecture_and_Development_Guide_2026-09-06.md)
-for the functional specification, architecture, and development guide.
-
-Cross-codebase contracts: [../urbanflow-foundation/README.md](../urbanflow-foundation/README.md).
-Project entry point: [../README.md](../README.md).
