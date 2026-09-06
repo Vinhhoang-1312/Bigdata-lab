@@ -32,21 +32,28 @@ The score is a simple **demand ratio = current trip count / historical mean**
 
 ## The four codebases
 
+Data flows through A -> B -> C. `urbanflow-foundation` sits under all three: it
+holds the contracts they share but is not a step in the pipeline.
+
 ```text
                  NYC taxi source data
                           |
-                   [ urbanflow-batch ]  (Spark)
+                   [ urbanflow-batch ]  (Spark)            = A
                     Bronze -> Silver -> Gold
                     |                     |
              Silver trips           Gold historical
                     |                     |
-          [ urbanflow-replay ]            |
+          [ urbanflow-replay ]            |                 = B
            Silver -> Kafka                |
            (Python + Kafka)               |
                     |                     |
-                  Kafka  --------> [ urbanflow-streaming ]  (Spark Structured
-                                    Kafka + Gold historical  Streaming + Streamlit)
-                                    -> Gold live -> app
+                  Kafka  --------> [ urbanflow-streaming ]  = C
+                                    Kafka + Gold historical   (Spark Structured
+                                    -> Gold live -> app        Streaming + Streamlit)
+
+  ------------------------------------------------------------------
+  [ urbanflow-foundation ]  shared contracts + fixtures under A, B, C
+  (schemas, time/path meaning, acceptance tests — imported by none)
 ```
 
 | Codebase | What it is |
