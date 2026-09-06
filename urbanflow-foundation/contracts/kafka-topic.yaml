@@ -1,0 +1,43 @@
+# Kafka Topic Contract
+# Foundation version: 1.0.0
+#
+# Topic-level configuration and partitioning semantics for
+# the urbanflow trip-event stream.
+#
+# Producer: urbanflow-replay
+# Consumer: urbanflow-streaming
+
+contract_name: "kafka_topic"
+foundation_version: "1.0.0"
+
+topic:
+  name: "urbanflow.trip-events"
+  partitions: 4
+  replication_factor: 1
+
+message:
+  key:
+    description: "Decimal string form of pickup_zone_id."
+    type: "string"
+    example: "161"
+  value:
+    format: "JSON"
+    schema_reference: "kafka-trip-event.schema.json"
+
+partitioning_semantics: |
+  The message key provides stable zone-based partitioning.
+  Consumers may rely on Kafka partition order within a single
+  partition, but must not assume global ordering across all
+  four partitions.
+
+broker:
+  mode: "KRaft"
+  count: 1
+  description: "One Kafka broker in KRaft mode is sufficient for this project."
+
+notes: |
+  No Schema Registry is required within the one-week scope.
+  Contract versioning is handled by urbanflow-foundation.
+  Spark Structured Streaming must declare the expected JSON schema
+  explicitly and reject or quarantine malformed messages rather than
+  silently changing the contract.

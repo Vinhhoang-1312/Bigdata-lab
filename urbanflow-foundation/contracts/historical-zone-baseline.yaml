@@ -1,0 +1,89 @@
+# Historical Zone Baseline Contract
+# Foundation version: 1.0.0
+#
+# Authoritative schema and construction rules for the historical
+# Gold mobility baseline.
+#
+# Producer: urbanflow-batch
+# Consumer: urbanflow-streaming
+#
+# Physical format: Parquet
+# Integrated path:  s3a://urbanflow/gold/historical_zone_baseline/
+
+contract_name: "historical_zone_baseline"
+foundation_version: "1.0.0"
+
+physical:
+  format: "Parquet"
+  integrated_path: "s3a://urbanflow/gold/historical_zone_baseline/"
+
+grain: |
+  One row per unique combination of:
+    pickup_zone_id, day_of_week, hour, five_minute_slot
+
+schema:
+  - name: "pickup_zone_id"
+    type: "integer"
+    nullable: false
+
+  - name: "day_of_week"
+    type: "integer"
+    nullable: false
+    description: "ISO weekday. Monday=1, Sunday=7."
+
+  - name: "hour"
+    type: "integer"
+    nullable: false
+    description: "0..23."
+
+  - name: "five_minute_slot"
+    type: "integer"
+    nullable: false
+    description: "0..11, floor(minute / 5)."
+
+  - name: "historical_mean_trip_count"
+    type: "double"
+    nullable: false
+    description: "Arithmetic mean of per-date trip counts, including zeros."
+
+  - name: "historical_std_trip_count"
+    type: "double"
+    nullable: false
+    description: "Population standard deviation (Spark stddev_pop) of per-date trip counts, including zeros."
+
+  - name: "historical_mean_distance"
+    type: "double"
+    nullable: true
+    description: "Arithmetic mean of individual trip distances in the key."
+
+  - name: "historical_mean_duration"
+    type: "double"
+    nullable: true
+    description: "Arithmetic mean of individual trip durations in the key."
+
+construction_rules: |
+  1. For every historical calendar date, eligible pickup zone,
+     hour, and five-minute slot, compute that date's trip count.
+
+  2. Include zero-count eligible zone/date/slot combinations.
+
+  3. For the same pickup_zone_id + ISO weekday + hour + slot:
+     historical_mean_trip_count
+         = arithmetic mean of per-date counts
+
+     historical_std_trip_count
+         = population standard deviation (Spark stddev_pop)
+           of those per-date counts, including zeros.
+
+  4. historical_mean_distance and historical_mean_duration
+     are arithmetic means across individual trips in the key.
+
+  Eligible zones come from the taxi-zone lookup.
+  Eligible calendar dates come from the frozen historical period.
+
+  This prevents an upward-biased baseline that would occur if
+  dates with zero trips were silently omitted.
+
+notes: |
+  The JSONL fixture expresses the logical contract for lightweight
+  independent testing; the integrated physical format remains Parquet.

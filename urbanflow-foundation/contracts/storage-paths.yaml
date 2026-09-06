@@ -1,0 +1,68 @@
+# Storage Paths Contract
+# Foundation version: 1.0.0
+#
+# Integrated S3A storage layout and single-writer ownership map.
+# One owning writer per shared path. Consumers must not rewrite
+# another subsystem's outputs.
+
+contract_name: "storage_paths"
+foundation_version: "1.0.0"
+
+bucket: "urbanflow"
+base_uri: "s3a://urbanflow/"
+
+paths:
+
+  # --- Bronze layer ---
+
+  bronze_trips:
+    path: "s3a://urbanflow/bronze/trips/"
+    writer: "urbanflow-batch"
+    description: "Raw source trip Parquet files, partitioned by year/month."
+
+  bronze_zone_lookup:
+    path: "s3a://urbanflow/bronze/zone_lookup/"
+    writer: "urbanflow-batch"
+    description: "Taxi zone lookup CSV."
+
+  bronze_zone_geometry:
+    path: "s3a://urbanflow/bronze/zone_geometry/"
+    writer: "urbanflow-batch"
+    description: "Taxi zone GeoJSON or geographic Parquet."
+
+  # --- Silver layer ---
+
+  silver_trips:
+    path: "s3a://urbanflow/silver/trips/"
+    writer: "urbanflow-batch"
+    readers:
+      - "urbanflow-replay"
+    description: "Cleaned, standardized trip Parquet, partitioned by year/month."
+
+  # --- Gold layer ---
+
+  historical_zone_baseline:
+    path: "s3a://urbanflow/gold/historical_zone_baseline/"
+    writer: "urbanflow-batch"
+    readers:
+      - "urbanflow-streaming"
+    description: "Historical mobility baseline Parquet."
+
+  live_zone_metrics:
+    path: "s3a://urbanflow/gold/live_zone_metrics/"
+    writer: "urbanflow-streaming"
+    description: "Live streaming comparison metrics Parquet."
+
+  # --- Checkpoints ---
+
+  streaming_checkpoint:
+    path: "s3a://urbanflow/checkpoints/live_trip_metrics/"
+    writer: "urbanflow-streaming"
+    description: "Structured Streaming checkpoint. Must never be mixed with Gold data."
+
+rules:
+  - "One owning writer per shared path."
+  - "Consumers do not rewrite another subsystem's outputs."
+  - "Checkpoints remain separate from Gold data."
+  - "Bronze/Silver/Gold terminology remains frozen."
+  - "Independent development may substitute local Foundation fixtures without changing the integrated path contract."

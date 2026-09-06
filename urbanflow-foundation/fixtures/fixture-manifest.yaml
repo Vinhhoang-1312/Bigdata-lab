@@ -1,0 +1,60 @@
+# Fixture Manifest
+# Foundation version: 1.0.0
+#
+# Index of all Foundation fixture files with their contract references
+# and intended consumers.
+
+foundation_version: "1.0.0"
+
+scenario:
+  date: "2025-01-06"
+  day_of_week: 1
+  day_name: "Monday"
+  window_start: "2025-01-06T08:00:00-05:00"
+  window_end: "2025-01-06T08:05:00-05:00"
+  hour: 8
+  five_minute_slot: 0
+  analytics_timezone: "America/New_York"
+  zones: [161, 236]
+
+fixtures:
+
+  bronze_source_trips:
+    file: "bronze/source_trips.csv"
+    format: "CSV"
+    contract_reference: "contracts/silver-trips.yaml"
+    consumer: "urbanflow-batch"
+    row_count: 10
+    description: "Raw trip rows for batch cleaning pipeline testing. Contains historical-period data (2024)."
+
+  silver_trips:
+    file: "silver/silver_trips.jsonl"
+    format: "JSONL"
+    contract_reference: "contracts/silver-trips.yaml"
+    consumer: "urbanflow-replay"
+    row_count: 7
+    description: "Cleaned Silver trips for replay producer testing. Matches the replay-period scenario."
+
+  kafka_trip_events:
+    file: "kafka/trip_events.jsonl"
+    format: "JSONL"
+    contract_reference: "contracts/kafka-trip-event.schema.json"
+    consumer: "urbanflow-streaming"
+    row_count: 7
+    description: "Kafka events for streaming testing. 5 events for zone 161, 2 for zone 236."
+
+  historical_zone_baseline:
+    file: "gold/historical_zone_baseline.jsonl"
+    format: "JSONL"
+    contract_reference: "contracts/historical-zone-baseline.yaml"
+    consumer: "urbanflow-streaming"
+    row_count: 2
+    description: "Historical baseline for zones 161 and 236 at the fixture scenario time slot."
+
+  expected_live_zone_metrics:
+    file: "gold/expected_live_zone_metrics.jsonl"
+    format: "JSONL"
+    contract_reference: "contracts/live-zone-metrics.yaml"
+    consumer: "validation"
+    row_count: 2
+    description: "Deterministic expected output when processing kafka fixture against historical baseline fixture."

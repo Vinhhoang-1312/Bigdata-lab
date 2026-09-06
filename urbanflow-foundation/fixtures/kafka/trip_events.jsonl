@@ -1,0 +1,7 @@
+{"event_id": "trip-20250106-080030-161-001", "event_time": "2025-01-06T08:00:30-05:00", "pickup_zone_id": 161, "dropoff_zone_id": 236, "trip_distance": 3.2, "trip_duration_minutes": 17.4, "fare_amount": 18.50}
+{"event_id": "trip-20250106-080115-161-002", "event_time": "2025-01-06T08:01:15-05:00", "pickup_zone_id": 161, "dropoff_zone_id": 237, "trip_distance": 2.1, "trip_duration_minutes": 13.5, "fare_amount": 14.00}
+{"event_id": "trip-20250106-080200-161-003", "event_time": "2025-01-06T08:02:00-05:00", "pickup_zone_id": 161, "dropoff_zone_id": 48, "trip_distance": 3.8, "trip_duration_minutes": 17.4, "fare_amount": 19.00}
+{"event_id": "trip-20250106-080244-161-004", "event_time": "2025-01-06T08:02:44-05:00", "pickup_zone_id": 161, "dropoff_zone_id": 234, "trip_distance": 2.9, "trip_duration_minutes": 13.8, "fare_amount": 16.50}
+{"event_id": "trip-20250106-080355-161-005", "event_time": "2025-01-06T08:03:55-05:00", "pickup_zone_id": 161, "dropoff_zone_id": 170, "trip_distance": 4.5, "trip_duration_minutes": 18.2, "fare_amount": 22.00}
+{"event_id": "trip-20250106-080100-236-001", "event_time": "2025-01-06T08:01:00-05:00", "pickup_zone_id": 236, "dropoff_zone_id": 161, "trip_distance": 3.5, "trip_duration_minutes": 17.7, "fare_amount": 21.50}
+{"event_id": "trip-20250106-080320-236-002", "event_time": "2025-01-06T08:03:20-05:00", "pickup_zone_id": 236, "dropoff_zone_id": 170, "trip_distance": 5.1, "trip_duration_minutes": 17.8, "fare_amount": 24.00}

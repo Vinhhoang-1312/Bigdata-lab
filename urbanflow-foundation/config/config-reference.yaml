@@ -1,0 +1,50 @@
+# UrbanFlow Configuration Reference
+# Foundation version: 1.0.0
+#
+# This file defines the reference field names and baseline values
+# shared across subprojects. Each application codebase owns its own
+# local configuration file, but applicable shared settings must keep
+# the same meaning.
+#
+# Values marked <profile-specific> differ per machine/environment
+# and belong in each subproject's own config/settings.yaml.
+
+foundation_version: "1.0.0"
+
+time:
+  analytics_timezone: "America/New_York"
+
+kafka:
+  bootstrap_servers: "<profile-specific>"
+  topic: "urbanflow.trip-events"
+  partitions: 4
+  replication_factor: 1
+
+spark:
+  master: "<profile-specific>"
+  session_timezone: "America/New_York"
+
+seaweedfs:
+  s3_endpoint: "<profile-specific>"
+  bucket: "urbanflow"
+
+storage:
+  bronze_trips: "s3a://urbanflow/bronze/trips/"
+  bronze_zone_lookup: "s3a://urbanflow/bronze/zone_lookup/"
+  bronze_zone_geometry: "s3a://urbanflow/bronze/zone_geometry/"
+  silver_trips: "s3a://urbanflow/silver/trips/"
+  historical_baseline: "s3a://urbanflow/gold/historical_zone_baseline/"
+  live_metrics: "s3a://urbanflow/gold/live_zone_metrics/"
+  streaming_checkpoint: "s3a://urbanflow/checkpoints/live_trip_metrics/"
+
+credentials:
+  note: "Use environment variables for credentials and secrets."
+  aws_access_key_id: "${AWS_ACCESS_KEY_ID}"
+  aws_secret_access_key: "${AWS_SECRET_ACCESS_KEY}"
+
+frozen_values:
+  kafka_topic: "urbanflow.trip-events"
+  kafka_partitions: 4
+  kafka_replication_factor: 1
+  analytics_timezone: "America/New_York"
+  foundation_version: "1.0.0"

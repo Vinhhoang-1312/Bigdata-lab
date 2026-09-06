@@ -1,0 +1,2 @@
+{"pickup_zone_id": 161, "day_of_week": 1, "hour": 8, "five_minute_slot": 0, "historical_mean_trip_count": 2.0, "historical_std_trip_count": 1.0, "historical_mean_distance": 3.1, "historical_mean_duration": 16.5}
+{"pickup_zone_id": 236, "day_of_week": 1, "hour": 8, "five_minute_slot": 0, "historical_mean_trip_count": 1.0, "historical_std_trip_count": 1.0, "historical_mean_distance": 4.2, "historical_mean_duration": 18.0}

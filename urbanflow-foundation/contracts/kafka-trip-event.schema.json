@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urbanflow-foundation/contracts/kafka-trip-event.schema.json",
+  "title": "UrbanFlow Kafka Trip Event",
+  "description": "Authoritative JSON Schema for Kafka trip events produced by urbanflow-replay and consumed by urbanflow-streaming. Foundation version 1.0.0. All seven fields are required.",
+  "type": "object",
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Non-empty unique event identifier."
+    },
+    "event_time": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Pickup time as RFC 3339 with explicit UTC offset. Producers and consumers must not infer its meaning from host time zone."
+    },
+    "pickup_zone_id": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Pickup taxi zone ID. Semantic validity uses the zone lookup."
+    },
+    "dropoff_zone_id": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Dropoff taxi zone ID. Semantic validity uses the zone lookup."
+    },
+    "trip_distance": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Trip distance. Must be >= 0."
+    },
+    "trip_duration_minutes": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Trip duration in minutes. Must be >= 0."
+    },
+    "fare_amount": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Fare amount. Must be >= 0."
+    }
+  },
+  "required": [
+    "event_id",
+    "event_time",
+    "pickup_zone_id",
+    "dropoff_zone_id",
+    "trip_distance",
+    "trip_duration_minutes",
+    "fare_amount"
+  ],
+  "additionalProperties": false
+}

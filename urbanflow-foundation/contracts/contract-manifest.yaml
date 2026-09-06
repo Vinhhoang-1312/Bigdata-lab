@@ -1,0 +1,64 @@
+# UrbanFlow Contract Manifest
+# Foundation version: 1.0.0
+#
+# This file is the master index of all cross-codebase contracts.
+# Each entry identifies the authoritative contract file, the producer,
+# the consumer(s), and the Foundation version that froze the contract.
+
+foundation_version: "1.0.0"
+
+contracts:
+
+  silver_trips:
+    file: "silver-trips.yaml"
+    description: "Canonical Silver trip logical schema, validity rules, and partitioning."
+    physical_format: "Parquet"
+    producer: "urbanflow-batch"
+    consumers:
+      - "urbanflow-replay"
+    frozen_at: "1.0.0"
+
+  kafka_trip_event:
+    file: "kafka-trip-event.schema.json"
+    description: "Kafka trip event JSON Schema. All seven fields required."
+    physical_format: "JSON"
+    producer: "urbanflow-replay"
+    consumers:
+      - "urbanflow-streaming"
+    frozen_at: "1.0.0"
+
+  kafka_topic:
+    file: "kafka-topic.yaml"
+    description: "Kafka topic-level configuration and partitioning semantics."
+    producer: "urbanflow-replay"
+    consumers:
+      - "urbanflow-streaming"
+    frozen_at: "1.0.0"
+
+  historical_zone_baseline:
+    file: "historical-zone-baseline.yaml"
+    description: "Historical Gold baseline schema and construction rules."
+    physical_format: "Parquet"
+    producer: "urbanflow-batch"
+    consumers:
+      - "urbanflow-streaming"
+    frozen_at: "1.0.0"
+
+  live_zone_metrics:
+    file: "live-zone-metrics.yaml"
+    description: "Live Gold metrics schema, demand-ratio and z-score rules."
+    physical_format: "Parquet"
+    producer: "urbanflow-streaming"
+    consumers:
+      - "demo / optional dashboard"
+    frozen_at: "1.0.0"
+
+  time_semantics:
+    file: "time-semantics.md"
+    description: "Canonical analytics time zone and derived-field definitions."
+    frozen_at: "1.0.0"
+
+  storage_paths:
+    file: "storage-paths.yaml"
+    description: "Integrated S3A storage layout and single-writer ownership."
+    frozen_at: "1.0.0"

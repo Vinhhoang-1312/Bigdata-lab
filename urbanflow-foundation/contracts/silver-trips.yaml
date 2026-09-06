@@ -1,0 +1,111 @@
+# Silver Trips Contract
+# Foundation version: 1.0.0
+#
+# Authoritative logical schema for the canonical Silver trip dataset.
+# Producer: urbanflow-batch
+# Consumer: urbanflow-replay
+#
+# Physical format: Parquet
+# Integrated path:  s3a://urbanflow/silver/trips/
+# Recommended partitioning: year, month
+
+contract_name: "silver_trips"
+foundation_version: "1.0.0"
+
+physical:
+  format: "Parquet"
+  integrated_path: "s3a://urbanflow/silver/trips/"
+  partitioning:
+    - "year"
+    - "month"
+
+schema:
+  - name: "pickup_datetime"
+    type: "timestamp"
+    nullable: false
+    description: "NYC local pickup time in America/New_York."
+
+  - name: "dropoff_datetime"
+    type: "timestamp"
+    nullable: false
+    description: "NYC local dropoff time in America/New_York."
+
+  - name: "pickup_zone_id"
+    type: "integer"
+    nullable: false
+    description: "Must exist in the taxi-zone lookup."
+
+  - name: "dropoff_zone_id"
+    type: "integer"
+    nullable: false
+    description: "Must exist in the taxi-zone lookup."
+
+  - name: "trip_distance"
+    type: "double"
+    nullable: false
+    description: "Trip distance. Must be >= 0."
+
+  - name: "passenger_count"
+    type: "integer"
+    nullable: true
+    description: "Number of passengers. >= 0 when present."
+
+  - name: "fare_amount"
+    type: "double"
+    nullable: false
+    description: "Fare amount. >= 0 in canonical demo data."
+
+  - name: "total_amount"
+    type: "double"
+    nullable: true
+    description: "Total amount. >= 0 when present."
+
+  - name: "trip_duration_minutes"
+    type: "double"
+    nullable: false
+    description: "Trip duration in minutes. Must be >= 0."
+
+  - name: "year"
+    type: "integer"
+    nullable: false
+    description: "Derived from pickup_datetime."
+
+  - name: "month"
+    type: "integer"
+    nullable: false
+    description: "1..12, derived from pickup_datetime."
+
+  - name: "day_of_week"
+    type: "integer"
+    nullable: false
+    description: "ISO weekday. Monday=1, Sunday=7."
+
+  - name: "hour"
+    type: "integer"
+    nullable: false
+    description: "0..23, derived from pickup_datetime."
+
+  - name: "five_minute_slot"
+    type: "integer"
+    nullable: false
+    description: "0..11, floor(minute / 5)."
+
+analytics_timezone: "America/New_York"
+
+validity_rules:
+  - "pickup_datetime is not null"
+  - "dropoff_datetime is not null"
+  - "dropoff_datetime >= pickup_datetime"
+  - "pickup_zone_id is valid (exists in taxi-zone lookup)"
+  - "dropoff_zone_id is valid (exists in taxi-zone lookup)"
+  - "trip_distance >= 0"
+  - "trip_duration_minutes >= 0"
+  - "fare_amount >= 0"
+  - "passenger_count >= 0 when present"
+  - "total_amount >= 0 when present"
+
+notes: |
+  Additional data-cleaning rules may be introduced only when real-data
+  inspection justifies them, and such rules must be documented.
+  The JSONL fixture expresses the logical contract for lightweight
+  independent testing; the integrated physical format remains Parquet.

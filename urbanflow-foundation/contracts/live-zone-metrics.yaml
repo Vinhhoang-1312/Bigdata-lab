@@ -1,0 +1,95 @@
+# Live Zone Metrics Contract
+# Foundation version: 1.0.0
+#
+# Authoritative schema for the Gold live zone metrics produced by
+# Spark Structured Streaming.
+#
+# Producer: urbanflow-streaming
+# Consumer: demo / optional dashboard
+#
+# Physical format: Parquet
+# Integrated path:  s3a://urbanflow/gold/live_zone_metrics/
+
+contract_name: "live_zone_metrics"
+foundation_version: "1.0.0"
+
+physical:
+  format: "Parquet"
+  integrated_path: "s3a://urbanflow/gold/live_zone_metrics/"
+  checkpoint_path: "s3a://urbanflow/checkpoints/live_trip_metrics/"
+
+schema:
+  - name: "window_start"
+    type: "timestamp"
+    nullable: false
+    description: "Start of the five-minute tumbling window."
+
+  - name: "window_end"
+    type: "timestamp"
+    nullable: false
+    description: "End of the five-minute tumbling window."
+
+  - name: "pickup_zone_id"
+    type: "integer"
+    nullable: false
+
+  - name: "current_trip_count"
+    type: "long"
+    nullable: false
+    description: "Number of trips in the current streaming window."
+
+  - name: "historical_mean_trip_count"
+    type: "double"
+    nullable: true
+    description: "From the historical baseline. Null if no baseline exists."
+
+  - name: "demand_ratio"
+    type: "double"
+    nullable: true
+    description: "current_trip_count / historical_mean_trip_count."
+
+  - name: "z_score"
+    type: "double"
+    nullable: true
+    description: "(current_trip_count - historical_mean_trip_count) / historical_std_trip_count."
+
+demand_ratio_rule: |
+  demand_ratio = current_trip_count / historical_mean_trip_count
+
+  If historical_mean_trip_count is null or <= 0:
+      demand_ratio = null
+
+z_score_rule: |
+  z_score = (current_trip_count - historical_mean_trip_count)
+            / historical_std_trip_count
+
+  If historical_std_trip_count is null or <= 0:
+      z_score = null
+
+join_semantics: |
+  The historical join is a LEFT JOIN from the current streaming
+  window to the historical baseline.
+
+  A current window is preserved even if no historical baseline exists
+  for that pickup_zone_id + day_of_week + hour + five_minute_slot.
+
+  The join key uses:
+      pickup_zone_id
+      day_of_week   (derived from window_start in America/New_York)
+      hour          (derived from window_start in America/New_York)
+      five_minute_slot (derived from window_start in America/New_York)
+
+window:
+  type: "tumbling"
+  duration_minutes: 5
+  examples:
+    - "08:00–08:05"
+    - "08:05–08:10"
+    - "08:10–08:15"
+
+notes: |
+  The demo may choose not to emphasize z-score, but the Gold live
+  contract remains stable.
+  The checkpoint directory must never be mixed with Gold data.
+  The JSONL fixture expresses the logical contract for lightweight
+  independent testing; the integrated physical format remains Parquet.

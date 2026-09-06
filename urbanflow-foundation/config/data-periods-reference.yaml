@@ -1,0 +1,36 @@
+# UrbanFlow Data Periods Reference
+# Foundation version: 1.0.0
+#
+# Template for freezing historical baseline and streaming replay
+# period dates. Once filled and frozen, the same period lock must
+# be used by Batch, Replay, Streaming integration tests, and the
+# demo documentation.
+#
+# Fill the <TO BE DETERMINED> fields after real data acquisition
+# (Gate 7) and data-split freeze (Gate 8).
+
+foundation_version: "1.0.0"
+
+invariant: |
+  Historical baseline period != Streaming replay period.
+
+  Historical: "What normally happened before?"
+  Replay:     "What is happening now?"
+
+historical_period:
+  description: "Period used by urbanflow-batch to build the historical Gold baseline."
+  start_date: "<TO BE DETERMINED after data acquisition>"
+  end_date: "<TO BE DETERMINED after data acquisition>"
+  example: "2023-01-01 to 2024-12-31"
+
+replay_period:
+  description: "Held-out period used by urbanflow-replay to produce Kafka events."
+  start_date: "<TO BE DETERMINED after data acquisition>"
+  end_date: "<TO BE DETERMINED after data acquisition>"
+  example: "2025-01-01 to 2025-01-31"
+
+notes: |
+  The exact dates depend on the NYC taxi source data actually acquired.
+  Once selected, record and freeze them here.
+  The fixture data uses a representative replay date of 2025-01-06
+  (Monday) for the reference expected-result calculations.
