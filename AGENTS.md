@@ -54,6 +54,7 @@ cp .env.example .env
 docker compose up -d --build
 docker compose run --rm foundation-check
 docker compose run --rm spark-submit
+docker compose run --rm kafka-cli
 docker compose config --quiet
 ```
 

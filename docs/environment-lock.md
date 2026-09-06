@@ -1,8 +1,8 @@
 # UrbanFlow Environment Lock — In Progress
 
-This records validated versions. Kafka and Streaming entries remain pending
-until those subprojects are implemented; therefore the final integration lock
-is not yet complete.
+This records validated versions. Streaming entries remain pending until that
+subproject is implemented; therefore the final integration lock is not yet
+complete.
 
 ```text
 Foundation:
@@ -64,13 +64,37 @@ Spark master:
 Analytics timezone:
   America/New_York
 
-Kafka:
-  PENDING
+Kafka image:
+  apache/kafka:3.9.1
+
+Kafka mode:
+  One broker, KRaft, node/controller ID 1
+
+Kafka bootstrap servers:
+  kafka:9092 inside Compose
+  localhost:9094 from host
+
+Kafka topic:
+  urbanflow.trip-events
+  4 partitions, replication factor 1
+
+Replay image:
+  urbanflow/replay:python3.13
+
+Replay Python:
+  3.13.11
+
+confluent-kafka / librdkafka:
+  2.15.0 / 2.15.0
+
+PyArrow:
+  25.0.1
 
 Streaming runtime:
   PENDING
 ```
 
 Validated gates so far: Foundation, Spark master/two workers, SeaweedFS,
-Spark↔S3A Parquet round trip, fixture Batch, canonical two-month Silver,
-Historical Gold, and Batch Volume evidence.
+Spark↔S3A Parquet round trip, fixture and canonical Batch, Historical Gold,
+Kafka broker/topic producer-consumer smoke, fixture Replay, direct Batch →
+Replay integration, and Replay Velocity evidence through 5,000 events/sec.

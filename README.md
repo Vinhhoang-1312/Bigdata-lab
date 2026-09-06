@@ -101,17 +101,19 @@ Usage details: [urbanflow-batch/README.md](urbanflow-batch/README.md) and
 
 ### Recommended: Docker Compose
 
-The reproducible development environment includes Python 3.13 for Foundation
-checks, Spark 4.2.0 with two workers, Hadoop S3A, SeaweedFS, and AWS CLI:
+The reproducible development environment includes Python 3.13, Spark 4.2.0
+with two workers, Hadoop S3A, SeaweedFS, Kafka 3.9.1, and AWS CLI:
 
 ```bash
 cp .env.example .env
 docker compose up -d --build
 docker compose run --rm foundation-check
 docker compose run --rm spark-submit
+docker compose run --rm kafka-cli
 ```
 
-Expect `FOUNDATION FIXTURES = PASS` and `WRITE/READ/DATA = PASS`. See
+Expect `FOUNDATION FIXTURES = PASS`, `WRITE/READ/DATA = PASS`, and a four-partition
+`urbanflow.trip-events` topic. See
 [docs/docker-environment.md](docs/docker-environment.md) for service addresses,
 version locks, cluster submission, logs, and shutdown commands.
 
@@ -152,27 +154,24 @@ Create the bucket (`urbanflow`, per
 aws s3api create-bucket --bucket urbanflow --endpoint-url http://localhost:8333
 ```
 
-The `4.45` tag is a candidate, not validated. Pin the tag that passes the
-Spark <-> SeaweedFS Parquet round-trip (acceptance test E) in
-`docs/environment-lock.md`, along with the Hadoop / `hadoop-aws` / AWS SDK
-versions. Keep credentials in environment variables (see
+The Compose environment locks the validated `4.45` tag and records it with the
+Hadoop / `hadoop-aws` / AWS SDK versions in `docs/environment-lock.md`. Keep
+credentials in environment variables (see
 `urbanflow-foundation/config/config-reference.yaml`), never in source.
 
-### 2. Kafka (Confluent Platform, WSL Ubuntu)
+### 2. Kafka
 
-Start the broker in KRaft mode, then create the topic:
+Compose starts the locked single-broker Kafka 3.9.1 KRaft service and creates
+the canonical topic idempotently:
 
 ```bash
-kafka-topics --create \
-  --topic urbanflow.trip-events \
-  --partitions 4 \
-  --replication-factor 1 \
-  --bootstrap-server localhost:9092
+docker compose up -d kafka kafka-topic-init
+docker compose run --rm kafka-cli
 ```
 
-Topic name, partitions and replication factor are frozen in
-`urbanflow-foundation/contracts/kafka-topic.yaml` — do not change them per
-machine. Record your broker start command in `docs/environment-lock.md`.
+Use `kafka:9092` from Compose containers and `localhost:9094` from the host.
+Topic name, partitions, and replication factor remain frozen in
+`urbanflow-foundation/contracts/kafka-topic.yaml`.
 
 ### 3. Record the environment lock
 
