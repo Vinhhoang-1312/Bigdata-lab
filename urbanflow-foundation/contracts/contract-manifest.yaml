@@ -50,7 +50,8 @@ contracts:
     physical_format: "Parquet"
     producer: "urbanflow-streaming"
     consumers:
-      - "demo / optional dashboard"
+      - "urbanflow-streaming analytics app"
+      - "demo"
     frozen_at: "1.0.0"
 
   time_semantics:

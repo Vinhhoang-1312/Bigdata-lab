@@ -56,13 +56,18 @@ Independent development is enabled by the fixtures under `fixtures/`:
 ```text
 urbanflow-batch
     uses fixtures/bronze/
+    diffed against fixtures/silver/expected_silver_from_bronze.jsonl
 
 urbanflow-replay
-    uses fixtures/silver/
+    uses fixtures/silver/silver_trips.jsonl
 
 urbanflow-streaming
     uses fixtures/kafka/
     and fixtures/gold/historical_zone_baseline.jsonl
+    diffed against fixtures/gold/expected_live_zone_metrics.jsonl
+
+urbanflow-streaming analytics app
+    uses fixtures/gold/
 ```
 
 The fixtures are deliberately small reference datasets. The production/integration physical formats remain those defined by the contracts (notably Parquet for Silver/Gold and JSON for Kafka events).

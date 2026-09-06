@@ -168,12 +168,35 @@ Zone 236:
 
 ---
 
+## Test K — Analytics app against Foundation Gold fixtures
+
+The Analytics stage is mandatory scope, so it has its own independent test:
+
+```text
+gold/historical_zone_baseline.jsonl + gold/expected_live_zone_metrics.jsonl
+        -> urbanflow-streaming analytics app
+```
+
+Required:
+
+- the app reads both Gold datasets without rewriting them;
+- current and historical activity are shown together;
+- demand ratio is visible and interpretable;
+- zone and time filtering work;
+- top unusual / high-demand zones are listed;
+- basic charts and tables render.
+
+The app must not require a running Structured Streaming job: it is a thin
+consumer of Gold data and is tested independently.
+
+---
+
 ## GO decisions
 
 | Gate | Preconditions |
 |---|---|
 | FOUNDATION-GO | Test 0 passes, all contracts frozen |
-| GO-A | FOUNDATION-GO + Tests C, D, E pass |
-| GO-B | FOUNDATION-GO + Tests B, F pass |
-| GO-C | FOUNDATION-GO + Tests C, F, G pass |
-| INTEGRATION-GO | A, B, C independent contract tests pass + environment lock completed |
+| GO-A | FOUNDATION-GO + Tests C, D, E pass + `fixtures/bronze/` readable |
+| GO-B | FOUNDATION-GO + Tests B, F pass + `fixtures/silver/silver_trips.jsonl` readable |
+| GO-C | FOUNDATION-GO + Tests C, F, G pass + `fixtures/kafka/` and `fixtures/gold/historical_zone_baseline.jsonl` readable |
+| INTEGRATION-GO | Tests H, I, J, K pass + environment lock completed |

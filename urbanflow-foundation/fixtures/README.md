@@ -16,10 +16,35 @@ They are **not** representative of production volume. Their purpose is to verify
 
 ```text
 urbanflow-batch       uses fixtures/bronze/source_trips.csv
+                      and fixtures/bronze/zone_lookup.csv
+                      diffed against
+                      fixtures/silver/expected_silver_from_bronze.jsonl
+
 urbanflow-replay      uses fixtures/silver/silver_trips.jsonl
+
 urbanflow-streaming   uses fixtures/kafka/trip_events.jsonl
                       and fixtures/gold/historical_zone_baseline.jsonl
+                      diffed against
+                      fixtures/gold/expected_live_zone_metrics.jsonl
+
+analytics app         uses fixtures/gold/ (both files)
 ```
+
+## What the fixtures deliberately do NOT share
+
+`gold/historical_zone_baseline.jsonl` is **not** derived from
+`bronze/source_trips.csv`. The bronze fixture holds historical-period rows
+(2024) used to test Bronze -> Silver cleaning; the baseline fixture is
+independent input for streaming tests. Deriving a baseline from the bronze
+rows produces different numbers, and that is expected.
+
+Likewise `silver/silver_trips.jsonl` (replay-period, 2025-01-06) is not the
+Silver output of the bronze fixture. The Bronze -> Silver reference output is
+`silver/expected_silver_from_bronze.jsonl`.
+
+`silver/silver_trips.jsonl` and `kafka/trip_events.jsonl` **do** describe the
+same seven trips, so urbanflow-replay's input and urbanflow-streaming's input
+cannot drift apart. The validator enforces this.
 
 ## Physical formats
 
@@ -61,9 +86,18 @@ All fixtures use a consistent scenario:
 - **Date:** Monday, January 6, 2025 (ISO weekday = 1).
 - **Window:** 08:00–08:05 (hour=8, five_minute_slot=0).
 - **Analytics timezone:** America/New_York (UTC offset -05:00 in January).
-- **Zones:** 161 (Midtown Center) and 236 (Upper East Side North).
+- **Zones:** 161 (Midtown Center) and 236 (Upper East Side North), both
+  present in `bronze/zone_lookup.csv`.
 
-The bronze fixture contains representative historical-period rows (2024) to test the batch cleaning pipeline.
+The bronze fixture contains representative historical-period rows (2024) to
+test the batch cleaning pipeline. Of its 15 rows, 10 are valid and 5 are each
+invalid under exactly one Silver validity rule, so a pipeline that implements
+no cleaning cannot pass. Its dates straddle a DST boundary — 2024-03-04 is EST
+(`-05:00`) and 2024-03-11 is EDT (`-04:00`) — so the expected Silver output
+also pins the daylight-saving rules in `contracts/time-semantics.md`.
+
+Trip durations in the fixtures are exact values derived from the two
+timestamps, not rounded.
 
 ## Validation
 

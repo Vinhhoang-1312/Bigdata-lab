@@ -28,7 +28,7 @@ Each codebase records the Foundation version it implements against.
 | Silver trips | `urbanflow-batch` | `urbanflow-replay` |
 | Kafka trip event | `urbanflow-replay` | `urbanflow-streaming` |
 | Historical zone baseline | `urbanflow-batch` | `urbanflow-streaming` |
-| Live zone metrics | `urbanflow-streaming` | demo / optional dashboard |
+| Live zone metrics | `urbanflow-streaming` | `urbanflow-streaming` analytics app / demo |
 
 Each persistent shared path has one owning writer. Consumers must not rewrite another subproject's contract output.
 
@@ -57,6 +57,16 @@ Each persistent shared path has one owning writer. Consumers must not rewrite an
 - Join the historical Gold baseline.
 - Calculate demand ratio and optional z-score.
 - Write Gold live metrics and checkpoints.
+- Serve Gold historical and live outputs through a lightweight web analytics
+  application (Streamlit preferred).
+- Provide dashboard, visualization, filtering, comparison, and simple
+  interactive analytical tools.
+
+The analytics app is a thin consumer of Gold data. It belongs to Subproject C
+for implementation convenience, but it must stay decoupled from the Structured
+Streaming job so it can be tested independently against Foundation Gold
+fixtures. The Analytics stage is mandatory project scope; only the choice of
+web framework is negotiable.
 
 ## Independent development
 

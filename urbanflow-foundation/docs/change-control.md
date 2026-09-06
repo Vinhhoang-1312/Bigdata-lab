@@ -67,6 +67,10 @@ After Foundation/Integration freeze:
 - Integrated storage paths.
 - Tested software/dependency versions.
 - Primary success criteria.
+- The five-stage Data Sources -> Ingestion -> Storage -> Processing ->
+  Analytics conceptual pipeline.
+- A lightweight user-facing Analytics serving layer consuming Gold data.
+  The specific web framework may change; the requirement may not.
 
 ## What may vary by independent machine
 

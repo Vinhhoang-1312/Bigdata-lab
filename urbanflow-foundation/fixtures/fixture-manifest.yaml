@@ -19,13 +19,44 @@ scenario:
 
 fixtures:
 
+  zone_lookup:
+    file: "bronze/zone_lookup.csv"
+    format: "CSV"
+    contract_reference: "contracts/silver-trips.yaml"
+    consumers:
+      - "urbanflow-batch"
+      - "urbanflow-streaming"
+    row_count: 8
+    description: >-
+      Taxi-zone lookup. Defines the eligible zone set for Silver zone validity
+      and for the zero-count rule in the historical baseline construction.
+
   bronze_source_trips:
     file: "bronze/source_trips.csv"
     format: "CSV"
     contract_reference: "contracts/silver-trips.yaml"
     consumer: "urbanflow-batch"
+    row_count: 15
+    valid_rows: 10
+    rejected_rows: 5
+    description: >-
+      Raw trip rows for batch cleaning pipeline testing, holding
+      historical-period data (2024). Rows 11-15 are each invalid under exactly
+      one Silver validity rule (null pickup, dropoff before pickup, negative
+      distance, unknown pickup zone, negative fare) so the rejection path
+      cannot be left unimplemented. Spans a DST boundary: 2024-03-04 is EST
+      and 2024-03-11 is EDT.
+
+  expected_silver_from_bronze:
+    file: "silver/expected_silver_from_bronze.jsonl"
+    format: "JSONL"
+    contract_reference: "contracts/silver-trips.yaml"
+    consumer: "validation"
     row_count: 10
-    description: "Raw trip rows for batch cleaning pipeline testing. Contains historical-period data (2024)."
+    description: >-
+      Reference Silver output for the 10 valid bronze/source_trips.csv rows,
+      in source order. urbanflow-batch diffs its Bronze -> Silver result
+      against this file (acceptance test H).
 
   silver_trips:
     file: "silver/silver_trips.jsonl"
@@ -49,7 +80,11 @@ fixtures:
     contract_reference: "contracts/historical-zone-baseline.yaml"
     consumer: "urbanflow-streaming"
     row_count: 2
-    description: "Historical baseline for zones 161 and 236 at the fixture scenario time slot."
+    description: >-
+      Historical baseline for zones 161 and 236 at the fixture scenario time
+      slot. NOT derived from bronze/source_trips.csv: it is independent input
+      for streaming tests, so its means and standard deviations do not
+      correspond to the bronze rows.
 
   expected_live_zone_metrics:
     file: "gold/expected_live_zone_metrics.jsonl"
