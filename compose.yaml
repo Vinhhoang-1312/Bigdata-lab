@@ -1,0 +1,178 @@
+name: urbanflow
+
+x-spark-image: &spark-image apache/spark:4.2.0-python3
+x-spark-common: &spark-common
+  image: *spark-image
+  restart: unless-stopped
+  networks:
+    - urbanflow
+
+services:
+  foundation-check:
+    image: python:3.13.11-slim-bookworm
+    working_dir: /workspace/urbanflow-foundation
+    network_mode: none
+    volumes:
+      - ./:/workspace:ro
+    command: ["python", "checks/validate_contract_fixtures.py"]
+    profiles: ["tools"]
+
+  seaweedfs:
+    build:
+      context: ./docker/seaweedfs
+    image: urbanflow/seaweedfs:4.45
+    restart: unless-stopped
+    environment:
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:?Copy .env.example to .env}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:?Copy .env.example to .env}
+    command: ["server", "-dir=/data", "-s3", "-s3.config=/run/urbanflow/s3.json"]
+    ports:
+      - "8333:8333"
+      - "8888:8888"
+      - "9333:9333"
+    volumes:
+      - seaweed-data:/data
+    networks:
+      - urbanflow
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sS -o /dev/null http://localhost:8333/"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  bucket-init:
+    image: amazon/aws-cli:2.36.40
+    depends_on:
+      seaweedfs:
+        condition: service_healthy
+    environment:
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:?Copy .env.example to .env}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:?Copy .env.example to .env}
+      AWS_DEFAULT_REGION: us-east-1
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        aws --endpoint-url http://seaweedfs:8333 s3api head-bucket --bucket urbanflow 2>/dev/null ||
+        aws --endpoint-url http://seaweedfs:8333 s3api create-bucket --bucket urbanflow
+    networks:
+      - urbanflow
+    restart: "no"
+
+  spark-master:
+    <<: *spark-common
+    hostname: spark-master
+    command:
+      - /opt/spark/bin/spark-class
+      - org.apache.spark.deploy.master.Master
+      - --host
+      - spark-master
+      - --port
+      - "7077"
+      - --webui-port
+      - "8080"
+    ports:
+      - "7077:7077"
+      - "8080:8080"
+    mem_limit: 768m
+    cpus: 1.0
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/json/ >/dev/null"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  spark-worker-1:
+    <<: *spark-common
+    hostname: spark-worker-1
+    depends_on:
+      spark-master:
+        condition: service_healthy
+    command:
+      - /opt/spark/bin/spark-class
+      - org.apache.spark.deploy.worker.Worker
+      - --cores
+      - "2"
+      - --memory
+      - 768m
+      - --webui-port
+      - "8081"
+      - spark://spark-master:7077
+    ports:
+      - "8081:8081"
+    mem_limit: 1g
+    cpus: 2.0
+
+  spark-worker-2:
+    <<: *spark-common
+    hostname: spark-worker-2
+    depends_on:
+      spark-master:
+        condition: service_healthy
+    command:
+      - /opt/spark/bin/spark-class
+      - org.apache.spark.deploy.worker.Worker
+      - --cores
+      - "2"
+      - --memory
+      - 768m
+      - --webui-port
+      - "8082"
+      - spark://spark-master:7077
+    ports:
+      - "8082:8082"
+    mem_limit: 1g
+    cpus: 2.0
+
+  spark-submit:
+    image: *spark-image
+    user: root
+    working_dir: /workspace
+    environment:
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:?Copy .env.example to .env}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:?Copy .env.example to .env}
+      AWS_REGION: us-east-1
+    volumes:
+      - ./:/workspace
+      - spark-ivy:/root/.ivy2
+    networks:
+      - urbanflow
+    entrypoint:
+      - /opt/spark/bin/spark-submit
+      - --conf
+      - spark.jars.ivy=/root/.ivy2
+      - --packages
+      - org.apache.hadoop:hadoop-aws:3.5.0
+      - --conf
+      - spark.sql.session.timeZone=America/New_York
+      - --conf
+      - spark.hadoop.fs.s3a.impl=org.apache.hadoop.fs.s3a.S3AFileSystem
+      - --conf
+      - spark.hadoop.fs.s3a.endpoint=http://seaweedfs:8333
+      - --conf
+      - spark.hadoop.fs.s3a.path.style.access=true
+      - --conf
+      - spark.hadoop.fs.s3a.connection.ssl.enabled=false
+    command: ["--master", "local[2]", "/workspace/docker/spark/s3a_smoke_test.py"]
+    mem_limit: 3g
+    cpus: 2.0
+    profiles: ["tools"]
+
+  aws:
+    image: amazon/aws-cli:2.36.40
+    environment:
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:?Copy .env.example to .env}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:?Copy .env.example to .env}
+      AWS_DEFAULT_REGION: us-east-1
+    networks:
+      - urbanflow
+    entrypoint: ["aws", "--endpoint-url", "http://seaweedfs:8333"]
+    command: ["s3api", "list-buckets"]
+    profiles: ["tools"]
+
+networks:
+  urbanflow:
+    name: urbanflow-net
+
+volumes:
+  seaweed-data:
+  spark-ivy:

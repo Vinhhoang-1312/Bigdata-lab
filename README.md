@@ -98,6 +98,24 @@ Usage details: [urbanflow-batch/README.md](urbanflow-batch/README.md) and
 
 ## Setup
 
+### Recommended: Docker Compose
+
+The reproducible development environment includes Python 3.13 for Foundation
+checks, Spark 4.2.0 with two workers, Hadoop S3A, SeaweedFS, and AWS CLI:
+
+```bash
+cp .env.example .env
+docker compose up -d --build
+docker compose run --rm foundation-check
+docker compose run --rm spark-submit
+```
+
+Expect `FOUNDATION FIXTURES = PASS` and `WRITE/READ/DATA = PASS`. See
+[docs/docker-environment.md](docs/docker-environment.md) for service addresses,
+version locks, cluster submission, logs, and shutdown commands.
+
+The component-level setup below remains useful as a manual reference.
+
 ### 0. Foundation check — no infrastructure needed
 
 Needs only Python 3.13 and the standard library. Run this first.
