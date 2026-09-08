@@ -22,15 +22,16 @@
 - [x] Two-month Volume experiment with recorded evidence.
 - [x] Real-data cleaning observations documented without adding unsupported
   rules.
+- [x] Batch canonical February Silver → Replay → Kafka without an ad-hoc
+  boundary adapter.
 
 ## Deferred cross-subproject acceptance
 
 These are integration gates, not unfinished independent Batch implementation:
 
-- [ ] Batch canonical Silver → Replay without an adapter.
 - [ ] Batch canonical Historical Gold → Streaming without an adapter.
-- [ ] Complete environment lock with Kafka and Streaming runtime details.
+- [ ] Complete environment lock with Streaming runtime details.
 - [ ] Final end-to-end integration acceptance.
 
-Replay can now be implemented against its Foundation fixture and then tested
-against Batch's canonical February Silver partition.
+Replay now consumes Batch's canonical February Silver partition directly and
+publishes Foundation-compliant Kafka events.

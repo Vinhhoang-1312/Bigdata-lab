@@ -19,6 +19,7 @@ docker compose up -d --build
 docker compose run --rm foundation-check
 docker compose run --rm spark-submit
 docker compose run --rm aws
+docker compose run --rm kafka-cli
 ```
 
 Expected Spark/S3A output:
@@ -42,6 +43,7 @@ Compose-managed `spark-ivy` named volume. Later runs reuse them.
 | SeaweedFS S3 | `http://seaweedfs:8333` inside Docker; http://localhost:8333 on host |
 | SeaweedFS filer | http://localhost:8888 |
 | SeaweedFS master | http://localhost:9333 |
+| Kafka | `kafka:9092` inside Docker; `localhost:9094` on host |
 
 Inside containers, always use Compose service names rather than `localhost`.
 
@@ -59,6 +61,7 @@ Inspect status and logs:
 docker compose ps
 docker compose logs -f spark-master spark-worker-1 spark-worker-2
 docker compose logs -f seaweedfs
+docker compose logs -f kafka
 ```
 
 Download the frozen Batch source months with containerized Python 3.13:
@@ -96,6 +99,21 @@ List S3 buckets:
 docker compose run --rm aws
 ```
 
+Describe the canonical Kafka topic:
+
+```bash
+docker compose run --rm kafka-cli
+```
+
+Run Replay's Python contract and Kafka integration tests:
+
+```bash
+docker compose run --rm replay-python \
+  python /workspace/urbanflow-replay/tests/run_contract_tests.py
+docker compose run --rm replay-python \
+  python /workspace/urbanflow-replay/tests/run_kafka_integration.py
+```
+
 Stop services while preserving data:
 
 ```bash
@@ -118,7 +136,10 @@ docker compose down --volumes
 - `hadoop-aws`: 3.5.0
 - AWS SDK bundle resolved by Hadoop: 2.35.4
 - SeaweedFS: 4.45
-- Foundation Python: 3.13.11
+- Foundation and Replay Python: 3.13.11
+- Kafka: 3.9.1, single-broker KRaft
+- `confluent-kafka` / librdkafka: 2.15.0 / 2.15.0
+- PyArrow: 25.0.1
 - AWS CLI: 2.36.40
 
 The Spark image currently supplies Python 3.10.12. This known difference from

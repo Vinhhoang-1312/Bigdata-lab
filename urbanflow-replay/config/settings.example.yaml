@@ -1,0 +1,24 @@
+# UrbanFlow Replay — example configuration
+# Copy to settings.yaml and adjust for your environment.
+# Credentials: export AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY;
+# never store them in this file.
+# KAFKA_BOOTSTRAP_SERVERS env var overrides kafka.bootstrap_servers.
+
+foundation_version: "1.0.0"
+analytics_timezone: "America/New_York"
+
+input:
+  mode: fixture                 # fixture or integrated
+  fixture_path: urbanflow-foundation/fixtures/silver/silver_trips.jsonl
+  parquet_uri: s3a://urbanflow/silver/trips/
+  s3_endpoint: seaweedfs:8333
+  s3_region: us-east-1
+
+kafka:
+  bootstrap_servers: kafka:9092
+  topic: urbanflow.trip-events
+
+replay:
+  start_date: "2023-02-01"
+  end_date: "2023-02-28"
+  planned_rates: [100, 500, 1000, 2500, 5000]
