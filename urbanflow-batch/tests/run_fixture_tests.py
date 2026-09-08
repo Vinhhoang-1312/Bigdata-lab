@@ -12,6 +12,7 @@ from pathlib import Path
 
 from pyspark.sql import SparkSession, functions as F
 
+from batch.config import load_settings
 from batch.io import read_source_trips, read_zone_lookup
 from batch.schemas import (
     SILVER_FIELDS,
@@ -22,7 +23,7 @@ from batch.schemas import (
 from batch.transforms import bronze_to_silver
 from batch.validation import assert_silver_contract
 
-ROOT = Path("/workspace")
+ROOT = Path(__file__).resolve().parents[2]
 SOURCE = ROOT / "urbanflow-foundation/fixtures/bronze/source_trips.csv"
 ZONES = ROOT / "urbanflow-foundation/fixtures/bronze/zone_lookup.csv"
 EXPECTED = ROOT / "urbanflow-foundation/fixtures/silver/expected_silver_from_bronze.jsonl"
@@ -303,6 +304,13 @@ def main() -> None:
     result.silver.unpersist()
     result.rejected.unpersist()
     spark.stop()
+
+    settings = load_settings(ROOT / "urbanflow-batch/config/settings.fixture.yaml")
+    assert settings.foundation_version == "1.0.0"
+    assert settings.analytics_timezone == "America/New_York"
+    assert settings.source_trips_format == "csv"
+    assert settings.write_mode == "overwrite"
+    print("BATCH CONFIG LOADING = PASS")
     print("BATCH FIXTURE TESTS = PASS")
 
 

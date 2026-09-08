@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "urbanflow-batch"
+version = "1.0.0"
+description = "UrbanFlow historical Bronze, Silver, and Gold Spark pipelines"
+requires-python = ">=3.11"
+dependencies = [
+  "pyspark>=4.0,<4.3",
+  "PyYAML>=6.0,<7",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8,<10"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.setuptools.packages.find]
+include = ["batch*", "spark*"]

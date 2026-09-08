@@ -61,7 +61,7 @@ docker compose run --rm spark-submit \
 docker compose run --rm spark-submit \
   --master 'local[2]' \
   /workspace/urbanflow-batch/spark/bronze_to_silver.py \
-  --config /workspace/urbanflow-batch/config/settings.fixture.json
+  --config /workspace/urbanflow-batch/config/settings.fixture.yaml
 ```
 
 Expected results include:

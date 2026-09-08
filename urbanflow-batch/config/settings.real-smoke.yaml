@@ -1,0 +1,10 @@
+foundation_version: "1.0.0"
+analytics_timezone: "America/New_York"
+
+source_trips_path: "/workspace/local-data/nyc-tlc/yellow_tripdata_2023-01.parquet"
+source_trips_format: "parquet"
+zone_lookup_path: "/workspace/local-data/nyc-tlc/taxi_zone_lookup.csv"
+
+silver_output_path: "s3a://urbanflow/dev/batch/real-smoke/silver/trips/"
+rejected_output_path: "s3a://urbanflow/dev/batch/real-smoke/rejected/trips/"
+write_mode: "overwrite"

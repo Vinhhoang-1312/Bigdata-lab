@@ -13,8 +13,9 @@ from pyspark.sql import SparkSession, functions as F
 from batch.schemas import SILVER_FIELDS
 from batch.validation import assert_silver_contract
 
-EXPECTED_PATH = Path(
-    "/workspace/urbanflow-foundation/fixtures/silver/expected_silver_from_bronze.jsonl"
+EXPECTED_PATH = (
+    Path(__file__).resolve().parents[2]
+    / "urbanflow-foundation/fixtures/silver/expected_silver_from_bronze.jsonl"
 )
 TIMESTAMP_OUTPUT_PATTERN = "yyyy-MM-dd'T'HH:mm:ssXXX"
 FLOAT_FIELDS = {

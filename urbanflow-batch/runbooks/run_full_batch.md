@@ -46,7 +46,7 @@ docker compose run --rm spark-submit \
   --master spark://spark-master:7077 \
   --executor-memory 512m --total-executor-cores 4 \
   /workspace/urbanflow-batch/spark/bronze_to_silver.py \
-  --config /workspace/urbanflow-batch/config/settings.integration.json
+  --config /workspace/urbanflow-batch/config/settings.integration.yaml
 ```
 
 ## 6. Demonstrate Spark API equivalence

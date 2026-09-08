@@ -13,12 +13,17 @@ from batch.transforms import bronze_to_silver
 from batch.validation import assert_silver_contract
 
 
+from pathlib import Path
+
+DEFAULT_CONFIG = Path(__file__).resolve().parents[1] / "config" / "settings.fixture.yaml"
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--config",
-        default="/workspace/urbanflow-batch/config/settings.fixture.json",
-        help="Path to a Batch JSON settings file",
+        default=str(DEFAULT_CONFIG),
+        help="Path to a Batch YAML settings file",
     )
     return parser.parse_args()
 

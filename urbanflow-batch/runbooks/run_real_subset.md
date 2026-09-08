@@ -20,7 +20,7 @@ docker compose run --rm spark-submit \
   --executor-memory 512m \
   --total-executor-cores 4 \
   /workspace/urbanflow-batch/spark/bronze_to_silver.py \
-  --config /workspace/urbanflow-batch/config/settings.real-smoke.json
+  --config /workspace/urbanflow-batch/config/settings.real-smoke.yaml
 ```
 
 The smoke-test output is isolated from the canonical integration path:

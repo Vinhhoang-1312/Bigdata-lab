@@ -15,8 +15,11 @@ from batch.io import read_source_trips, read_zone_lookup
 from batch.schemas import HISTORICAL_BASELINE_FIELDS
 from batch.transforms import bronze_to_silver
 
-SOURCE = "/workspace/urbanflow-foundation/fixtures/bronze/source_trips.csv"
-ZONES = "/workspace/urbanflow-foundation/fixtures/bronze/zone_lookup.csv"
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+SOURCE = str(ROOT / "urbanflow-foundation/fixtures/bronze/source_trips.csv")
+ZONES = str(ROOT / "urbanflow-foundation/fixtures/bronze/zone_lookup.csv")
 
 
 def main() -> None:
