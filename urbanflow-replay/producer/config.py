@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
+
+import yaml
 
 FOUNDATION_VERSION = "1.0.0"
 ANALYTICS_TIMEZONE = "America/New_York"
@@ -29,24 +30,48 @@ class ReplayConfig:
     planned_rates: tuple[int, ...]
 
 
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+def _resolve_fixture_path(raw_path: str, config_file: Path) -> str:
+    path = Path(raw_path)
+    if path.exists():
+        return str(path)
+    if raw_path.startswith("/workspace/"):
+        candidate = REPO_ROOT / raw_path.removeprefix("/workspace/")
+        if candidate.exists():
+            return str(candidate)
+    candidate = REPO_ROOT / path
+    if candidate.exists():
+        return str(candidate)
+    candidate = config_file.parent / path
+    if candidate.exists():
+        return str(candidate)
+    return raw_path
+
+
 def load_config(path: str | Path) -> ReplayConfig:
-    with Path(path).open(encoding="utf-8") as handle:
-        raw = json.load(handle)
+    config_path = Path(path).resolve()
+    with config_path.open(encoding="utf-8") as handle:
+        raw = yaml.safe_load(handle)
 
     config = ReplayConfig(
         foundation_version=str(raw["foundation_version"]),
         analytics_timezone=str(raw["analytics_timezone"]),
         bootstrap_servers=os.getenv(
-            "KAFKA_BOOTSTRAP_SERVERS", str(raw["bootstrap_servers"])
+            "KAFKA_BOOTSTRAP_SERVERS",
+            str(raw["kafka"]["bootstrap_servers"]),
         ),
-        topic=str(raw["topic"]),
-        fixture_path=str(raw["fixture_path"]),
-        integrated_silver_uri=str(raw["integrated_silver_uri"]),
-        s3_endpoint=str(raw["s3_endpoint"]),
-        s3_region=str(raw["s3_region"]),
-        replay_start_date=str(raw["replay_start_date"]),
-        replay_end_date=str(raw["replay_end_date"]),
-        planned_rates=tuple(int(rate) for rate in raw["planned_rates"]),
+        topic=str(raw["kafka"]["topic"]),
+        fixture_path=_resolve_fixture_path(
+            str(raw["input"]["fixture_path"]), config_path
+        ),
+        integrated_silver_uri=str(raw["input"]["parquet_uri"]),
+        s3_endpoint=str(raw["input"]["s3_endpoint"]),
+        s3_region=str(raw["input"]["s3_region"]),
+        replay_start_date=str(raw["replay"]["start_date"]),
+        replay_end_date=str(raw["replay"]["end_date"]),
+        planned_rates=tuple(int(rate) for rate in raw["replay"]["planned_rates"]),
     )
     _validate_frozen_values(config)
     return config

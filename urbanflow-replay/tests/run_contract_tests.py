@@ -8,6 +8,8 @@ import json
 import tempfile
 from pathlib import Path
 
+import yaml
+
 from producer.config import load_config
 from producer.event_mapper import EVENT_FIELDS, EventMapper, SILVER_EVENT_FIELDS
 from producer.event_time import EventTimeError, parse_event_time
@@ -17,10 +19,10 @@ from producer.rate_controller import RateController
 from producer.replay import replay_records
 from producer.serialization import message_key, serialize_event
 
-ROOT = Path("/workspace")
+ROOT = Path(__file__).resolve().parents[2]
 REPLAY = ROOT / "urbanflow-replay"
 FOUNDATION = ROOT / "urbanflow-foundation"
-CONFIG = REPLAY / "config/settings.json"
+CONFIG = REPLAY / "config/settings.yaml"
 SILVER = FOUNDATION / "fixtures/silver/silver_trips.jsonl"
 EXPECTED_EVENTS = FOUNDATION / "fixtures/kafka/trip_events.jsonl"
 ZONES = FOUNDATION / "fixtures/bronze/zone_lookup.csv"
@@ -56,10 +58,10 @@ def test_configuration() -> None:
     assert 'end_date: "2023-02-28"' in period_text
     assert (REPLAY / "FOUNDATION_VERSION").read_text().strip() == "1.0.0"
 
-    raw = json.loads(CONFIG.read_text(encoding="utf-8"))
-    raw["topic"] = "wrong.topic"
-    with tempfile.NamedTemporaryFile("w", suffix=".json") as handle:
-        json.dump(raw, handle)
+    raw = yaml.safe_load(CONFIG.read_text(encoding="utf-8"))
+    raw["kafka"]["topic"] = "wrong.topic"
+    with tempfile.NamedTemporaryFile("w", suffix=".yaml") as handle:
+        yaml.safe_dump(raw, handle)
         handle.flush()
         expect_error(lambda: load_config(handle.name), "topic must be")
 

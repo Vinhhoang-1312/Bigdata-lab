@@ -1,3 +1,0 @@
-# Runtime dependencies are pinned for the validated Replay image.
-confluent-kafka==2.15.0
-pyarrow==25.0.1

@@ -17,8 +17,9 @@ from producer.input_reader import (
 )
 from producer.replay import replay_records
 
-DEFAULT_CONFIG = Path(__file__).resolve().parents[1] / "config" / "settings.json"
-ZONE_FIXTURE = Path("/workspace/urbanflow-foundation/fixtures/bronze/zone_lookup.csv")
+REPO_ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_CONFIG = Path(__file__).resolve().parents[1] / "config" / "settings.yaml"
+ZONE_FIXTURE = REPO_ROOT / "urbanflow-foundation/fixtures/bronze/zone_lookup.csv"
 
 
 def parse_args() -> argparse.Namespace:

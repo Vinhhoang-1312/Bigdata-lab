@@ -18,7 +18,8 @@ from producer.event_validator import EventValidator
 from producer.input_reader import integrated_row_count, iter_integrated
 from producer.replay import replay_records
 
-CONFIG = Path("/workspace/urbanflow-replay/config/settings.json")
+REPLAY = Path(__file__).resolve().parents[1]
+CONFIG = REPLAY / "config/settings.yaml"
 EXPECTED_REPLAY_ROWS = 2_888_729
 SAMPLE_ROWS = 1_000
 PUBLISHED_ROWS = 100

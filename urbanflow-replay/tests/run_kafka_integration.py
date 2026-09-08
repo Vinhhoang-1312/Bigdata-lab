@@ -16,8 +16,8 @@ from producer.event_validator import EventValidator
 from producer.input_reader import iter_fixture, load_zone_ids
 from producer.replay import replay_records
 
-ROOT = Path("/workspace")
-CONFIG = ROOT / "urbanflow-replay/config/settings.json"
+ROOT = Path(__file__).resolve().parents[2]
+CONFIG = ROOT / "urbanflow-replay/config/settings.yaml"
 EXPECTED = ROOT / "urbanflow-foundation/fixtures/kafka/trip_events.jsonl"
 ZONES = ROOT / "urbanflow-foundation/fixtures/bronze/zone_lookup.csv"
 

@@ -11,8 +11,9 @@ from producer.config import load_config
 from producer.input_reader import iter_integrated
 from producer.replay import replay_records
 
-CONFIG = Path("/workspace/urbanflow-replay/config/settings.json")
-OUTPUT = Path("/workspace/urbanflow-replay/output/velocity-results.json")
+REPLAY = Path(__file__).resolve().parents[1]
+CONFIG = REPLAY / "config/settings.yaml"
+OUTPUT = REPLAY / "output/velocity-results.json"
 SECONDS_PER_RATE = 2
 MINIMUM_RATE_FRACTION = 0.90
 MAXIMUM_RATE_FRACTION = 1.10
