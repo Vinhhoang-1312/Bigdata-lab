@@ -17,7 +17,7 @@ try:
         chart_mode_for,
         prepare_live_view,
     )
-    from .zones import load_zone_lookup
+    from .zones import attach_demand_to_geojson, load_taxi_zone_geojson, load_zone_lookup
 except ImportError:
     from data_access import (
         HIGH_DEMAND_RATIO,
@@ -25,7 +25,7 @@ except ImportError:
         chart_mode_for,
         prepare_live_view,
     )
-    from zones import load_zone_lookup
+    from zones import attach_demand_to_geojson, load_taxi_zone_geojson, load_zone_lookup
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_HISTORICAL = ROOT / "urbanflow-foundation/fixtures/gold/historical_zone_baseline.jsonl"
@@ -146,37 +146,31 @@ def demand_chart(frame: pd.DataFrame) -> alt.Chart:
     )
 
 
-def nyc_map(frame: pd.DataFrame) -> pdk.Deck | None:
-    points = frame.dropna(subset=["lat", "lon"]).copy()
-    if points.empty:
-        return None
-    points["color"] = points["demand_ratio"].map(
-        lambda r: [193, 18, 31, 200] if pd.notna(r) and r > HIGH_DEMAND_RATIO
-        else [233, 196, 106, 200] if pd.notna(r) and r >= 1
-        else [42, 157, 143, 200] if pd.notna(r)
-        else [160, 160, 160, 180]
-    )
-    points["radius"] = (points["current_trip_count"].clip(lower=1) * 90).astype(int)
-    layer = pdk.Layer(
-        "ScatterplotLayer",
-        data=points,
-        get_position="[lon, lat]",
-        get_fill_color="color",
-        get_radius="radius",
-        radius_min_pixels=8,
-        radius_max_pixels=60,
-        pickable=True,
-    )
+def nyc_map(frame: pd.DataFrame) -> pdk.Deck:
+    geo = attach_demand_to_geojson(load_taxi_zone_geojson(), frame)
     return pdk.Deck(
-        layers=[layer],
+        layers=[
+            pdk.Layer(
+                "GeoJsonLayer",
+                data=geo,
+                opacity=0.9,
+                stroked=True,
+                filled=True,
+                get_fill_color="[properties.fill_r, properties.fill_g, properties.fill_b, properties.fill_a]",
+                get_line_color=[70, 70, 70],
+                line_width_min_pixels=0.7,
+                pickable=True,
+                auto_highlight=True,
+            )
+        ],
         initial_view_state=pdk.ViewState(
-            latitude=float(points.lat.mean()),
-            longitude=float(points.lon.mean()),
-            zoom=12,
-            pitch=35,
+            latitude=40.75,
+            longitude=-73.98,
+            zoom=11,
+            pitch=0,
         ),
         tooltip={
-            "html": "<b>{zone_label}</b><br/>Trips {current_trip_count}<br/>Ratio {demand_ratio}",
+            "html": "<b>{zone_label}</b><br/>Trips {current_trip_count}<br/>Demand ratio {demand_ratio}",
             "style": {"backgroundColor": "#111", "color": "white"},
         },
         map_provider="carto",
@@ -221,20 +215,21 @@ if view.empty:
     st.info("No Live Gold rows are available yet.")
     st.stop()
 
-label_to_id = (
+id_to_name = (
     view.drop_duplicates("pickup_zone_id")
-    .set_index("zone_label")["pickup_zone_id"]
+    .set_index("pickup_zone_id")["zone_name"]
     .to_dict()
 )
-selected_labels = st.sidebar.multiselect(
+zone_ids = sorted(id_to_name)
+selected_ids = st.sidebar.multiselect(
     "Pickup zones",
-    options=list(label_to_id),
-    default=list(label_to_id),
+    options=zone_ids,
+    default=zone_ids,
+    format_func=lambda z: f"{z}  {id_to_name[z]}",
 )
-selected_ids = [label_to_id[label] for label in selected_labels]
+selected_labels = [f"{z} — {id_to_name[z]}" for z in selected_ids]
 dates = view["window_start_local"].dt.date
 date_range = st.sidebar.date_input("Window dates", (dates.min(), dates.max()))
-st.sidebar.caption("Map: red = high demand, gold = near normal, teal = below history.")
 
 filtered = view[view.pickup_zone_id.isin(selected_ids)] if selected_ids else view.iloc[0:0]
 if isinstance(date_range, tuple) and len(date_range) == 2:
@@ -265,12 +260,12 @@ def live_body() -> None:
         ["Overview", "Current vs historical", "Zone explorer", "Unusual zones"]
     )
     with overview:
-        st.subheader("New York pickup demand")
-        deck = nyc_map(latest)
-        if deck is None:
-            st.info("No map coordinates for the selected zones.")
-        else:
-            st.pydeck_chart(deck, width="stretch")
+        st.subheader("New York taxi-zone demand")
+        st.pydeck_chart(nyc_map(latest), width="stretch", height=520)
+        st.caption(
+            "TLC taxi-zone polygons. Red = high demand (ratio > 1.5), gold ≈ history, "
+            "teal = below history, grey = no live Gold row."
+        )
         st.altair_chart(current_activity_chart(latest), width="stretch")
         show_table(latest)
     with comparison:
@@ -284,7 +279,7 @@ def live_body() -> None:
             st.altair_chart(line_comparison_chart(filtered, "zone_label"), width="stretch")
         show_table(filtered)
     with explorer:
-        zone = st.selectbox("Zone", selected_labels or list(label_to_id))
+        zone = st.selectbox("Zone", selected_labels or [f"{z} — {id_to_name[z]}" for z in zone_ids])
         zone_rows = filtered[filtered.zone_label == zone]
         if zone_rows.empty:
             st.info("No rows for this zone.")

@@ -7,12 +7,11 @@ from pathlib import Path
 import pandas as pd
 
 try:
-    from .zones import ZONE_CENTROIDS
+    from .zones import HIGH_DEMAND_RATIO, ZONE_CENTROIDS
 except ImportError:
-    from zones import ZONE_CENTROIDS
+    from zones import HIGH_DEMAND_RATIO, ZONE_CENTROIDS
 
 ANALYTICS_TIMEZONE = "America/New_York"
-HIGH_DEMAND_RATIO = 1.5
 
 HISTORICAL_COLUMNS = [
     "pickup_zone_id", "day_of_week", "hour", "five_minute_slot",

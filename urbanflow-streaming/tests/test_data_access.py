@@ -53,3 +53,32 @@ def test_single_window_chart_is_grouped_not_line():
     })
     assert chart_mode_for(one_window) == "grouped"
     assert chart_mode_for(two_windows) == "line"
+
+
+def test_choropleth_paints_live_zones_and_leaves_others_grey(foundation):
+    from analytics_app.data_access import GoldReader, HIGH_DEMAND_RATIO, prepare_live_view
+    from analytics_app.zones import attach_demand_to_geojson, load_taxi_zone_geojson, load_zone_lookup, ratio_fill_color
+
+    red = ratio_fill_color(2.5)
+    grey = ratio_fill_color(None)
+    assert red[0] > red[1] and red[0] > red[2]
+    assert grey[0] == grey[1] == grey[2]
+    assert 2.5 > HIGH_DEMAND_RATIO
+
+    live = GoldReader(
+        str(foundation / "fixtures/gold/historical_zone_baseline.jsonl"),
+        str(foundation / "fixtures/gold/expected_live_zone_metrics.jsonl"),
+    ).live()
+    view = prepare_live_view(live, load_zone_lookup(foundation / "fixtures/bronze/zone_lookup.csv"))
+    geo = attach_demand_to_geojson(load_taxi_zone_geojson(), view)
+    by_id = {f["properties"]["location_id"]: f["properties"] for f in geo["features"]}
+    assert len(geo["features"]) >= 200
+    assert by_id[161]["demand_ratio"] == 2.5
+    assert by_id[161]["fill_color"] == list(red)
+    assert by_id[236]["demand_ratio"] == 2.0
+    assert by_id[1]["demand_ratio"] is None
+    assert by_id[1]["fill_color"] == list(grey)
+    ring = geo["features"][next(i for i, f in enumerate(geo["features"]) if f["properties"]["location_id"] == 161)]["geometry"]["coordinates"][0]
+    lons, lats = zip(*ring)
+    assert -74.05 < min(lons) < max(lons) < -73.9
+    assert 40.70 < min(lats) < max(lats) < 40.80
