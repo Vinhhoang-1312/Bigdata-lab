@@ -1,0 +1,2 @@
+-e .[streaming]
+# JVM artifacts are supplied with --packages; see ../spark-packages.conf.

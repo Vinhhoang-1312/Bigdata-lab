@@ -231,6 +231,9 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
+# Playwright MCP local artifacts
+.playwright-mcp/
+
 
 
 docs/UrbanFlow_Proposal_and_Development_Guide_2026-09-06.md
