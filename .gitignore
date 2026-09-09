@@ -211,11 +211,21 @@ spark-warehouse/
 metastore_db/
 derby.log
 checkpoints/
+.checkpoints/
+**/.checkpoints/
 local-data/
 urbanflow-batch/output/
 urbanflow-batch/.local/
 urbanflow-replay/output/
 urbanflow-streaming/output/
+
+# Local machine config — keep *.example.yaml tracked
+**/config/settings.yaml
+!**/config/settings.example.yaml
+
+# Cursor / agent local files (not part of the demo)
+.cursor/
+docs/superpowers/
 
 # Ruff stuff:
 .ruff_cache/

@@ -1,9 +1,0 @@
-profile: offline
-time: {analytics_timezone: America/New_York}
-streaming: {watermark: 10 minutes, trigger: 10 seconds}
-kafka: {bootstrap_servers: localhost:9092, topic: urbanflow.trip-events}
-storage:
-  historical_baseline: ../urbanflow-foundation/fixtures/gold/historical_zone_baseline.jsonl
-  live_metrics: ../urbanflow-foundation/fixtures/gold/expected_live_zone_metrics.jsonl
-  streaming_checkpoint: .checkpoints/live_trip_metrics
-seaweedfs: {s3_endpoint: http://localhost:8333, path_style_access: true}
