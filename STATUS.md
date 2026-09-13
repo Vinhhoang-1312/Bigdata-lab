@@ -71,6 +71,22 @@ spark local smoke: SPARK = PASS, Spark 4.2.0, Java 21.0.11+10-LTS
 S3A smoke: WRITE = PASS, READ = PASS, DATA = PASS
 Kafka connector smoke: KAFKA CONNECTOR = PASS
 evidence file: urbanflow-streaming/docs/environment-lock.md
+
+2026-09-13 Kafka to Spark acceptance smoke:
+compose profile: integration
+Kafka broker: apache/kafka:3.9.1
+container bootstrap: kafka:9092
+host bootstrap: localhost:9094
+canonical topic: urbanflow.trip-events, 4 partitions, replication factor 1
+malformed smoke topic: urbanflow.trip-events.smoke-invalid, 1 partition
+smoke run id: smoke-task4-final-001
+result: Kafka -> Spark = PASS
+valid_count: 7
+invalid_count on canonical topic for this run: 0
+pickup_zone_ids: 161, 236
+malformed invalid_count: 1
+malformed validation_error: missing_required_field
+evidence file: urbanflow-streaming/docs/results/kafka-spark-smoke.md
 ```
 
 Working tree at snapshot time:
