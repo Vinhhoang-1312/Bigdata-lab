@@ -63,8 +63,13 @@ compose config: docker-compose config --quiet exited 0
 candidate package file updated:
 org.apache.spark:spark-sql-kafka-0-10_2.13:4.2.0
 org.apache.hadoop:hadoop-aws:3.5.0
-runtime smoke status: blocked
-blocker: Docker daemon is not reachable at npipe:////./pipe/docker_engine
+runtime smoke status: validated after Docker Desktop was started
+docker storage note:
+D:\Docker\DockerDesktopWSL\disk\docker_data.vhdx is the Docker Desktop storage file
+foundation-check: FOUNDATION FIXTURES = PASS
+spark local smoke: SPARK = PASS, Spark 4.2.0, Java 21.0.11+10-LTS
+S3A smoke: WRITE = PASS, READ = PASS, DATA = PASS
+Kafka connector smoke: KAFKA CONNECTOR = PASS
 evidence file: urbanflow-streaming/docs/environment-lock.md
 ```
 
