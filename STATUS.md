@@ -57,6 +57,15 @@ requirements/offline.txt uses -e .[offline], but editable install currently
 fails because setuptools discovers multiple top-level directories in the flat
 layout. Direct install of pytest, pandas, pyarrow, and PyYAML succeeded.
 PySpark install from the network was too slow and was stopped before completion.
+
+2026-09-13 runtime lock attempt:
+compose config: docker-compose config --quiet exited 0
+candidate package file updated:
+org.apache.spark:spark-sql-kafka-0-10_2.13:4.2.0
+org.apache.hadoop:hadoop-aws:3.5.0
+runtime smoke status: blocked
+blocker: Docker daemon is not reachable at npipe:////./pipe/docker_engine
+evidence file: urbanflow-streaming/docs/environment-lock.md
 ```
 
 Working tree at snapshot time:
