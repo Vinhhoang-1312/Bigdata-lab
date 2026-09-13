@@ -87,6 +87,18 @@ pickup_zone_ids: 161, 236
 malformed invalid_count: 1
 malformed validation_error: missing_required_field
 evidence file: urbanflow-streaming/docs/results/kafka-spark-smoke.md
+
+2026-09-13 Batch Historical Gold boundary:
+contract path: s3a://urbanflow/gold/historical_zone_baseline/
+storage service: SeaweedFS S3A, bucket urbanflow
+physical Docker storage:
+D:\Docker\DockerDesktopWSL\disk\docker_data.vhdx
+Batch source commit checked: 749ea2e5420b538d45280f86b48569a576ac1ad9
+result: BLOCKED_MISSING_ARTIFACT
+reason: no Parquet files found at the contract path
+Streaming verifier created:
+urbanflow-streaming/tests/verify_batch_gold_boundary.py
+evidence file: urbanflow-streaming/docs/results/batch-gold-boundary.md
 ```
 
 Working tree at snapshot time:
