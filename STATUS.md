@@ -33,6 +33,32 @@ worktree_decision: user requested direct work on urbanflow-streaming, no isolate
 No implementation test is marked as passing from this baseline. Tests are
 recorded only after a fresh run.
 
+Execution evidence during Task 1 and Task 2 start:
+
+```text
+2026-09-13 foundation validator:
+FOUNDATION FIXTURES = PASS
+
+2026-09-13 streaming focused tests:
+command: .\.venv\Scripts\python.exe -m pytest -q tests\test_fixture_runner.py tests\test_pipeline.py tests\test_data_access.py
+result: 8 passed, 5 skipped in 14.53s
+
+skipped reason:
+PySpark is not installed in the local venv, so Spark-backed pipeline tests are
+not yet a full baseline pass.
+
+environment:
+python: Python 3.12.10
+java: OpenJDK 17.0.18 Temurin
+pyspark: not installed
+
+dependency setup note:
+requirements/offline.txt uses -e .[offline], but editable install currently
+fails because setuptools discovers multiple top-level directories in the flat
+layout. Direct install of pytest, pandas, pyarrow, and PyYAML succeeded.
+PySpark install from the network was too slow and was stopped before completion.
+```
+
 Working tree at snapshot time:
 
 ```text

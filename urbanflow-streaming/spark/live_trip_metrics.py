@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+from urllib.parse import urlparse
 
 import yaml
 from pyspark.sql import DataFrame, SparkSession, functions as F
@@ -20,6 +21,8 @@ LIVE_COLUMNS = [
     "window_start", "window_end", "pickup_zone_id", "current_trip_count",
     "historical_mean_trip_count", "demand_ratio", "z_score",
 ]
+REPO_ROOT = Path(__file__).resolve().parents[2]
+FOUNDATION_FIXTURES = (REPO_ROOT / "urbanflow-foundation" / "fixtures").resolve()
 
 
 def configure_session(spark: SparkSession) -> SparkSession:
@@ -77,13 +80,65 @@ def read_kafka(spark: SparkSession, bootstrap_servers: str, topic: str) -> DataF
             .option("subscribe", topic).option("startingOffsets", "latest").load())
 
 
-def write_live_gold(metrics: DataFrame, output_path: str, checkpoint_path: str, trigger: str = "10 seconds"):
-    """Start restart-safe Parquet output; Spark's checkpoint tracks committed batches."""
-    if output_path.rstrip("/") == checkpoint_path.rstrip("/"):
+def _same_path(left: str, right: str) -> bool:
+    return left.rstrip("/\\") == right.rstrip("/\\")
+
+
+def _is_local_path(path: str) -> bool:
+    return not urlparse(path).scheme
+
+
+def _resolved(path: str) -> Path:
+    return Path(path).expanduser().resolve(strict=False)
+
+
+def _is_under(path: Path, parent: Path) -> bool:
+    try:
+        path.relative_to(parent)
+    except ValueError:
+        return False
+    return True
+
+
+def validate_runtime_paths(output_path: str, checkpoint_path: str) -> None:
+    """Reject equal paths and generated output below Foundation fixtures."""
+    if _same_path(output_path, checkpoint_path):
         raise ValueError("Live Gold and checkpoint paths must be different")
-    return (metrics.writeStream.format("parquet").outputMode("append")
-            .option("path", output_path).option("checkpointLocation", checkpoint_path)
-            .trigger(processingTime=trigger).start())
+
+    for label, value in (("Live Gold", output_path), ("checkpoint", checkpoint_path)):
+        if _is_local_path(value) and _is_under(_resolved(value), FOUNDATION_FIXTURES):
+            raise ValueError(f"{label} generated output must not be below Foundation fixtures")
+
+
+def write_live_gold(
+    metrics: DataFrame,
+    output_path: str,
+    checkpoint_path: str,
+    trigger: str = "10 seconds",
+    available_now: bool = False,
+):
+    """Start restart-safe Parquet output; Spark's checkpoint tracks committed batches."""
+    validate_runtime_paths(output_path, checkpoint_path)
+    writer = (metrics.writeStream.format("parquet").outputMode("append")
+              .option("path", output_path).option("checkpointLocation", checkpoint_path))
+    if available_now:
+        writer = writer.trigger(availableNow=True)
+    else:
+        writer = writer.trigger(processingTime=trigger)
+    return writer.start()
+
+
+def write_invalid_rows(
+    invalid: DataFrame,
+    trigger: str = "10 seconds",
+    available_now: bool = False,
+):
+    writer = invalid.writeStream.format("console").outputMode("append").queryName("invalid_events")
+    if available_now:
+        writer = writer.trigger(availableNow=True)
+    else:
+        writer = writer.trigger(processingTime=trigger)
+    return writer.start()
 
 
 def _settings(path: str) -> dict:
@@ -95,6 +150,9 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default=str(Path(__file__).parents[1] / "config/settings.yaml"))
     parser.add_argument("--fixture-events", help="Run a deterministic available-now file stream")
+    parser.add_argument(
+        "--available-now", action="store_true", help="Run a finite available-now stream"
+    )
     args = parser.parse_args()
     cfg = _settings(args.config)
     spark = configure_session(SparkSession.builder.appName("UrbanFlowLiveMetrics").getOrCreate())
@@ -105,11 +163,16 @@ def main() -> None:
     else:
         source = read_kafka(spark, cfg["kafka"]["bootstrap_servers"], cfg["kafka"]["topic"])
     gold, invalid = transform(source, historical, cfg["streaming"]["watermark"])
-    invalid_query = invalid.writeStream.format("console").outputMode("append").queryName("invalid_events").start()
+    available_now = bool(args.fixture_events or args.available_now)
+    validate_runtime_paths(cfg["storage"]["live_metrics"], cfg["storage"]["streaming_checkpoint"])
+    invalid_query = write_invalid_rows(invalid, cfg["streaming"]["trigger"], available_now)
     query = write_live_gold(gold, cfg["storage"]["live_metrics"],
-                            cfg["storage"]["streaming_checkpoint"], cfg["streaming"]["trigger"])
+                            cfg["storage"]["streaming_checkpoint"],
+                            cfg["streaming"]["trigger"], available_now)
     try:
         query.awaitTermination()
+        if available_now:
+            invalid_query.awaitTermination()
     finally:
         invalid_query.stop()
 

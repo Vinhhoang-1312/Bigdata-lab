@@ -82,16 +82,19 @@ JSONL fixtures. It covers malformed data, exact window boundaries, watermark
 presence, late-data configuration, missing and zero baselines, ratio/z-score
 null rules, left-join preservation, checkpoint restart and analytics access.
 
-For a file-stream run, first copy JSONL input into a directory and change
-`storage.live_metrics` in a copied config to a writable Parquet directory (the
-expected fixture is a read-only oracle):
+For a finite file-stream run, first copy JSONL input into a generated directory.
+Use the fixture example config because its Live Gold and checkpoint paths are
+writable generated paths. The expected fixture remains a read-only oracle:
 
 ```bash
-mkdir -p /tmp/urbanflow-events
-cp ../urbanflow-foundation/fixtures/kafka/trip_events.jsonl /tmp/urbanflow-events/
-spark-submit spark/live_trip_metrics.py --config config/settings.local.yaml \
-  --fixture-events /tmp/urbanflow-events/
+mkdir -p output/fixture-events
+cp ../urbanflow-foundation/fixtures/kafka/trip_events.jsonl output/fixture-events/
+spark-submit spark/live_trip_metrics.py --config config/settings.fixture.example.yaml \
+  --fixture-events output/fixture-events/ --available-now
 ```
+
+The runner rejects equal Live Gold/checkpoint paths and rejects generated output
+under `urbanflow-foundation/fixtures/`.
 
 ## Integrated Kafka, S3A, checkpoint and Live Gold
 
