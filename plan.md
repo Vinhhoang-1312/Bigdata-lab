@@ -43,6 +43,77 @@ What proves it is done?
 Where is the current blocker?
 ```
 
+### Plain-text workflow
+
+Use this diagram when your editor does not render Mermaid.
+
+```text
+Layer 0 - Foundation contracts
+  schemas + paths + topic + timezone
+        |
+        | contract rules
+        v
+Layer 1 - Batch / Dung data processing
+  raw TLC data -> Bronze -> Silver -> Historical Gold
+        |                         |
+        | Silver                  | Historical Gold
+        v                         v
+Layer 2 - Replay Kafka producer   |
+  Silver replay period -> urbanflow.trip-events
+        |                         |
+        | Kafka trip events       |
+        v                         |
+Layer 3 - Streaming / current branch
+  read Kafka -> validate -> 5-minute aggregation
+  -> join Historical Gold -> write Live Gold
+        |
+        | Live Gold
+        v
+Layer 4 - Analytics app
+  Streamlit reads Gold only -> map + metrics view
+
+Layer 5 - ML experiment, later
+  Silver -> 30-minute demand frame -> Spark MLlib model
+  -> evaluate against baselines
+```
+
+### Progress tracker
+
+Read this table first to know where the project is now.
+
+| Stage | Owner | Input | Output | Evidence | Status | Next action |
+|---|---|---|---|---|---|---|
+| Foundation contracts | Foundation | Contract files | Frozen schemas and paths | `FOUNDATION FIXTURES = PASS` in `STATUS.md` | DONE | Change only through Foundation change-control |
+| Batch data processing | Dung / Batch branch | TLC raw files on `D:\UrbanFlow\local-data\nyc-tlc` | Silver + Historical Gold on S3A | `batch-gold-boundary.md`; 534240 Historical Gold rows; 0 duplicate keys | DONE for current integration | Confirm if Dung has a newer branch than `origin/urbanflow-batch` |
+| Replay Kafka producer | Replay branch | Silver replay period | 10000 Kafka events for run `task6-20260914-003` | Replay output: 10000 sent, 0 rejected, 0 send errors | DONE for bounded run | Use larger/repeated run only if performance demo is needed |
+| Streaming data pipeline | Current branch | Kafka events + Historical Gold | Live Gold at `s3a://urbanflow/gold/live_zone_metrics/task6/task6_20260914_003/` | `end-to-end-streaming.md`; 4394 reference rows = 4394 live rows; 0 mismatches | DONE for bounded data pipeline | App visual smoke if UI demo is required |
+| Analytics app | Current branch | Live Gold / Historical Gold | Streamlit map and metrics | Not smoke-tested against run-scoped Live Gold yet | TODO | Point app/data access at generated Gold and take a smoke result |
+| ML experiment | New/experimental work | Canonical Silver | Demand forecast model + report | No DATA-GO, DISTRIBUTION-GO, or QUALITY-GO yet | NOT STARTED | Start only after choosing ML scope and data period |
+
+### How to track progress
+
+There are three tracking levels:
+
+```text
+1. plan.md
+   The owner view: stages, gates, risks, and next actions.
+
+2. STATUS.md
+   The measured state: commands run, row counts, output paths, PASS/FAIL.
+
+3. docs/results/*.md
+   The proof files: detailed result per gate.
+```
+
+Every completed stage must have all three:
+
+```text
+Status = DONE/PASS
+Evidence file = exists
+Verification command = recorded
+Measured output = row counts, path, or exact PASS text
+```
+
 ### Layered workflow
 
 ```mermaid
@@ -101,8 +172,8 @@ Current branch position:
 
 ```text
 branch: urbanflow-streaming
-latest completed commit: 82ff09e test(streaming): record Batch Gold boundary blocker
-local branch state: ahead of origin/urbanflow-streaming by 6 commits
+latest completed commit: 19b4c8c test(streaming): verify bounded integrated run
+local branch state: ahead of origin/urbanflow-streaming by 7 commits
 ```
 
 Current runtime output:
