@@ -72,8 +72,10 @@ Layer 3 - Streaming / current branch
 Layer 4 - Analytics app
   Streamlit reads Gold only -> map + metrics view
 
-Layer 5 - ML experiment, later
-  Silver -> 30-minute demand frame -> Spark MLlib model
+Layer 5 - ML experiment, current layer
+  Silver DATA-GO PASS -> 30-minute demand frame
+  -> leakage-safe features -> baselines
+  -> Spark MLlib model -> distributed proof
   -> evaluate against baselines
 ```
 
@@ -88,7 +90,7 @@ Read this table first to know where the project is now.
 | Replay Kafka producer | Replay branch | Silver replay period | 10000 Kafka events for run `task6-20260914-003` | Replay output: 10000 sent, 0 rejected, 0 send errors | DONE for bounded run | Use larger/repeated run only if performance demo is needed |
 | Streaming data pipeline | Current branch | Kafka events + Historical Gold | Live Gold at `s3a://urbanflow/gold/live_zone_metrics/task6/task6_20260914_003/` | `end-to-end-streaming.md`; 4394 reference rows = 4394 live rows; 0 mismatches | DONE for bounded data pipeline | App visual smoke if UI demo is required |
 | Analytics app | Current branch | Live Gold / Historical Gold | Streamlit map and metrics | `analytics-smoke.md`; 4394 view rows; Streamlit HTTP 200 on `127.0.0.1:8501` | DONE for smoke | Keep running app for demo or stop PID `14016` when finished |
-| ML experiment | New/experimental work | Canonical Silver | Demand forecast model + report | `silver-audit.md`; 5930325 Silver rows; missing required months `2022-08`, `2022-09`, `2022-11` | BLOCKED before credible training | Produce missing canonical Silver months or switch to smoke-only ML scope |
+| ML experiment | New/experimental work | Canonical Silver | Demand forecast model + report | `silver-audit.md`; 15448035 Silver rows; required months present; invalid range counts 0 | DATA-GO PASS, model work not started | Build 30-minute demand frame, leakage-safe features, baselines, then distributed GBT |
 
 ### How to track progress
 
@@ -149,8 +151,8 @@ flowchart TB
         A2["map and metrics view"]
     end
 
-    subgraph L5["Layer 5 - ML experiment, later"]
-        M1["read canonical Silver"]
+    subgraph L5["Layer 5 - ML experiment, current layer"]
+        M1["read canonical Silver: DATA-GO PASS"]
         M2["build 30-minute demand frame"]
         M3["train Spark MLlib GBTRegressor"]
         M4["evaluate against baselines"]
@@ -172,8 +174,8 @@ Current branch position:
 
 ```text
 branch: urbanflow-streaming
-latest completed commit: 19b4c8c test(streaming): verify bounded integrated run
-local branch state: ahead of origin/urbanflow-streaming by 7 commits
+latest completed commit: 446579e test(ml): audit silver data-go gate
+local branch state: ahead of origin/urbanflow-streaming by 10 commits before the latest documentation refresh
 ```
 
 Current runtime output:
@@ -206,6 +208,25 @@ Integrated Streaming bounded run:
   output_path: s3a://urbanflow/gold/live_zone_metrics/task6/task6_20260914_003/
   checkpoint_path: s3a://urbanflow/checkpoints/live_trip_metrics/task6/task6_20260914_003/
   evidence: urbanflow-streaming/docs/results/end-to-end-streaming.md
+
+Analytics app smoke:
+  PASS
+  live_rows: 4394
+  prepared analytics view rows: 4394
+  latest-window rows: 1
+  Streamlit HTTP: 200
+  Streamlit URL: http://127.0.0.1:8501
+  Streamlit PID: 14016
+  evidence: urbanflow-streaming/docs/results/analytics-smoke.md
+
+ML Silver DATA-GO:
+  PASS
+  silver_rows: 15448035
+  required months present:
+    2022-08, 2022-09, 2022-10, 2022-11, 2022-12, 2023-01, 2023-02
+  missing required months: none
+  invalid range counts: all 0
+  evidence: urbanflow-ml/docs/results/silver-audit.md
 ```
 
 So the project is here:
@@ -218,7 +239,7 @@ Kafka -> Spark boundary      DONE
 Batch Gold -> Streaming      DONE
 Integrated Streaming demo    DONE for bounded data pipeline
 Analytics app smoke          DONE
-ML experiment                STARTED: DATA-GO failed, training blocked
+ML experiment                CURRENT LAYER: DATA-GO PASS, feature/model work next
 ```
 
 ### Storage map
@@ -268,13 +289,17 @@ the matching gate below has fresh evidence.
 | Batch Gold -> Streaming boundary | real Parquet at `s3a://urbanflow/gold/historical_zone_baseline/` loads and validates | `batch-gold-boundary.md`; row count 534240; duplicate keys 0 | DONE |
 | Integrated demo | Kafka + Historical Gold -> Live Gold exact reference comparison | `end-to-end-streaming.md`; run `task6-20260914-003`; 10000 events; 4394 Live rows; 0 mismatches | DONE |
 | Analytics app smoke | app reads Gold only and prepares map/table/chart-ready rows | `analytics-smoke.md`; 4394 view rows; HTTP 200 from Streamlit | DONE |
-| ML DATA-GO | canonical Silver covers required time periods | `silver-audit.md`; missing `2022-08`, `2022-09`, `2022-11` | FAIL |
+| ML DATA-GO | canonical Silver covers required time periods | `silver-audit.md`; 15448035 rows; missing months none; invalid range counts 0 | PASS |
 | ML DISTRIBUTION-GO | Spark master has two workers and event logs show two executors doing work | not checked yet | NOT STARTED |
 | ML QUALITY-GO | GBT beats baselines on untouched test period | not checked yet | NOT STARTED |
 
 ### What must happen next
 
-The integrated Streaming data-pipeline demo has passed:
+The project is now at Layer 5. The integrated Streaming data-pipeline demo and
+Analytics smoke have passed, and the ML Silver DATA-GO audit now passes. The
+next implementation block is the ML demand frame and baseline/model pipeline.
+
+Streaming evidence:
 
 ```text
 Kafka trip events + Batch Historical Gold
@@ -292,9 +317,25 @@ docker-compose --profile integration run --rm spark-submit `
   --expected-events 10000
 ```
 
-This returned `END TO END STREAMING = PASS` on 2026-09-14. The remaining
-Streaming UI item is a visual app smoke against Gold, not a data-pipeline
-blocker.
+This returned `END TO END STREAMING = PASS` on 2026-09-14. The Streaming UI
+smoke also passed with Streamlit HTTP 200 on `http://127.0.0.1:8501`.
+
+ML evidence command:
+
+```powershell
+docker-compose --profile integration run --rm spark-submit `
+  --conf spark.ui.showConsoleProgress=false `
+  --master local[2] `
+  /workspace/urbanflow-ml/spark/audit_silver.py
+```
+
+This returned `ML DATA-GO = PASS` on 2026-09-14 after missing raw TLC months
+were downloaded to `D:\UrbanFlow\local-data\nyc-tlc` and Batch rebuilt Silver.
+The Bronze landing command wrote the new months but exited 1 because its row
+count assertion compares selected-period input rows with the already-appended
+Bronze total. The follow-up Bronze-to-Silver job exited 0 with
+`BRONZE TO SILVER = PASS`, and the independent ML audit is the current gate for
+whether training can proceed.
 
 ---
 

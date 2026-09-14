@@ -150,16 +150,30 @@ URBANFLOW_S3_ENDPOINT/AWS credentials.
 evidence file: urbanflow-streaming/docs/results/analytics-smoke.md
 
 2026-09-14 ML Silver DATA-GO audit:
-result: FAIL
+result: PASS after loading the missing raw months on drive D and rebuilding Silver
 silver input:
 s3a://urbanflow/silver/trips/
-total rows: 5,930,325
+total rows: 15,448,035
 required months:
 2022-08, 2022-09, 2022-10, 2022-11, 2022-12, 2023-01, 2023-02
 observed months:
-2008-12, 2009-01, 2022-10, 2022-12, 2023-01, 2023-02, 2023-03
-missing required months:
-2022-08, 2022-09, 2022-11
+2001-01, 2002-12, 2008-12, 2009-01, 2022-07, 2022-08, 2022-09,
+2022-10, 2022-11, 2022-12, 2023-01, 2023-02, 2023-03
+missing required months: none
+new raw source months on D:
+D:\UrbanFlow\local-data\nyc-tlc\yellow_tripdata_2022-08.parquet
+D:\UrbanFlow\local-data\nyc-tlc\yellow_tripdata_2022-09.parquet
+D:\UrbanFlow\local-data\nyc-tlc\yellow_tripdata_2022-11.parquet
+source acquisition bytes: 149,456,078
+Bronze append note:
+the Batch Bronze landing command wrote the three months but exited 1 because
+its assertion compares selected-period local rows with the full already-appended
+Bronze table. The follow-up Bronze-to-Silver job exited 0.
+Bronze-to-Silver refresh:
+source rows: 15,569,882
+valid Silver rows: 15,448,035
+rejected rows: 121,847
+result: BRONZE TO SILVER = PASS
 null counts on required non-null columns: all 0
 invalid range counts:
 dropoff_before_pickup=0
@@ -167,9 +181,10 @@ negative_fare_amount=0
 negative_trip_distance=0
 negative_trip_duration=0
 decision:
-Credible ML training is blocked. Do not train or report a real demand forecast
-model until the missing canonical Silver months exist, unless the scope is
-explicitly downgraded to a smoke-only ML demo.
+ML DATA-GO is open. The current layer is Layer 5: build the 30-minute demand
+frame, leakage-safe features, baselines, distributed Spark MLlib training, and
+quality evaluation. Do not claim model quality until DISTRIBUTION-GO and
+QUALITY-GO are verified.
 evidence file: urbanflow-ml/docs/results/silver-audit.md
 ```
 
@@ -492,5 +507,6 @@ current demand vs predicted demand
 3. For Streaming, keep the Streamlit app running only while demoing, or stop
    PID `14016` when finished.
 4. For ML, choose one of two paths:
-   produce the missing canonical Silver months for DATA-GO, or explicitly
-   downgrade to a smoke-only ML demo that makes no real model-quality claim.
+   continue from DATA-GO PASS into the 30-minute demand frame, leakage-safe
+   features, baseline evaluation, distributed Spark MLlib training, and final
+   QUALITY-GO decision.
