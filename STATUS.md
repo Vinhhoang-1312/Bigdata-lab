@@ -94,11 +94,40 @@ storage service: SeaweedFS S3A, bucket urbanflow
 physical Docker storage:
 D:\Docker\DockerDesktopWSL\disk\docker_data.vhdx
 Batch source commit checked: 749ea2e5420b538d45280f86b48569a576ac1ad9
-result: BLOCKED_MISSING_ARTIFACT
-reason: no Parquet files found at the contract path
+result: PASS after running Batch pipeline from origin/urbanflow-batch
+source acquisition output:
+D:\UrbanFlow\local-data\nyc-tlc
+bronze source rows: 5,980,721
+silver rows: 5,930,325
+rejected rows: 50,396
+historical rows: 534,240
+historical readback rows: 534,240
+duplicate historical keys: 0
 Streaming verifier created:
 urbanflow-streaming/tests/verify_batch_gold_boundary.py
 evidence file: urbanflow-streaming/docs/results/batch-gold-boundary.md
+
+2026-09-14 End-to-end Streaming bounded run:
+result: PASS
+run id: task6-20260914-003
+replay source: origin/urbanflow-replay temporary image urbanflow/replay-temp:task6
+replay records sent: 10,000
+replay records rejected: 0
+replay send errors: 0
+streaming verifier:
+urbanflow-streaming/tests/verify_integrated_run.py
+Kafka topic: urbanflow.trip-events
+Historical Gold input:
+s3a://urbanflow/gold/historical_zone_baseline/
+Live Gold output:
+s3a://urbanflow/gold/live_zone_metrics/task6/task6_20260914_003/
+Streaming checkpoint:
+s3a://urbanflow/checkpoints/live_trip_metrics/task6/task6_20260914_003/
+reference rows: 4,394
+live rows: 4,394
+mismatched rows: 0
+invalid rows: 0
+evidence file: urbanflow-streaming/docs/results/end-to-end-streaming.md
 ```
 
 Working tree at snapshot time:
@@ -417,8 +446,9 @@ current demand vs predicted demand
    test runs.
 2. Confirm whether "Dung branch" means `origin/urbanflow-batch` or another
    branch such as `origin/howie`.
-3. For Streaming, decide whether to finish the current Streamlit version or
-   implement the existing FastAPI + MapLibre plan.
+3. For Streaming, launch a visual app smoke against the run-scoped Live Gold
+   path if a UI demo is required. The data pipeline gate is already recorded as
+   PASS.
 4. For ML, do a focused research pass before coding. The research question
    should be: "Which one useful Spark MLlib model should UrbanFlow train from
    NYC TLC trips, and how will we prove it helps?"

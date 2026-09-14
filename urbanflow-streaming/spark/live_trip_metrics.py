@@ -5,7 +5,6 @@ import argparse
 from pathlib import Path
 from urllib.parse import urlparse
 
-import yaml
 from pyspark.sql import DataFrame, SparkSession, functions as F
 
 try:  # Supports both package imports and spark-submit of this file.
@@ -142,6 +141,8 @@ def write_invalid_rows(
 
 
 def _settings(path: str) -> dict:
+    import yaml
+
     with open(path, encoding="utf-8") as stream:
         return yaml.safe_load(stream)
 

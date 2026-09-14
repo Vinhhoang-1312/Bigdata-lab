@@ -5,7 +5,17 @@ import types
 import pytest
 
 
-def import_runner_without_pyspark(monkeypatch):
+def import_runner_without_pyspark(monkeypatch, block_yaml=False):
+    if block_yaml:
+        original_import = __import__
+
+        def import_without_yaml(name, *args, **kwargs):
+            if name == "yaml":
+                raise ModuleNotFoundError("No module named 'yaml'")
+            return original_import(name, *args, **kwargs)
+
+        monkeypatch.setattr("builtins.__import__", import_without_yaml)
+
     functions = types.SimpleNamespace()
     sql = types.SimpleNamespace(
         DataFrame=object,
@@ -27,6 +37,12 @@ def import_runner_without_pyspark(monkeypatch):
     )
     sys.modules.pop("spark.live_trip_metrics", None)
     return importlib.import_module("spark.live_trip_metrics")
+
+
+def test_streaming_helpers_import_without_yaml_dependency(monkeypatch):
+    runner = import_runner_without_pyspark(monkeypatch, block_yaml=True)
+
+    assert callable(runner.join_historical)
 
 
 def test_fixture_output_cannot_equal_foundation_fixture_path(monkeypatch):
