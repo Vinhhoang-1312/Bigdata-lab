@@ -128,6 +128,26 @@ live rows: 4,394
 mismatched rows: 0
 invalid rows: 0
 evidence file: urbanflow-streaming/docs/results/end-to-end-streaming.md
+
+2026-09-14 Analytics app smoke:
+result: PASS
+historical input:
+s3a://urbanflow/gold/historical_zone_baseline/
+live input:
+s3a://urbanflow/gold/live_zone_metrics/task6/task6_20260914_003/
+s3 endpoint: http://localhost:8333
+historical rows: 534,240
+live rows: 4,394
+prepared analytics view rows: 4,394
+latest-window rows: 1
+painted taxi-zone polygons: 1
+Streamlit launch: HTTP 200
+Streamlit URL: http://127.0.0.1:8501
+Streamlit PID: 14016
+code changes:
+analytics_app/data_access.py now handles s3a:// paths through s3fs using
+URBANFLOW_S3_ENDPOINT/AWS credentials.
+evidence file: urbanflow-streaming/docs/results/analytics-smoke.md
 ```
 
 Working tree at snapshot time:
@@ -446,9 +466,8 @@ current demand vs predicted demand
    test runs.
 2. Confirm whether "Dung branch" means `origin/urbanflow-batch` or another
    branch such as `origin/howie`.
-3. For Streaming, launch a visual app smoke against the run-scoped Live Gold
-   path if a UI demo is required. The data pipeline gate is already recorded as
-   PASS.
+3. For Streaming, keep the Streamlit app running only while demoing, or stop
+   PID `14016` when finished.
 4. For ML, do a focused research pass before coding. The research question
    should be: "Which one useful Spark MLlib model should UrbanFlow train from
    NYC TLC trips, and how will we prove it helps?"

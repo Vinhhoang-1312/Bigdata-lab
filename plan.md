@@ -87,8 +87,8 @@ Read this table first to know where the project is now.
 | Batch data processing | Dung / Batch branch | TLC raw files on `D:\UrbanFlow\local-data\nyc-tlc` | Silver + Historical Gold on S3A | `batch-gold-boundary.md`; 534240 Historical Gold rows; 0 duplicate keys | DONE for current integration | Confirm if Dung has a newer branch than `origin/urbanflow-batch` |
 | Replay Kafka producer | Replay branch | Silver replay period | 10000 Kafka events for run `task6-20260914-003` | Replay output: 10000 sent, 0 rejected, 0 send errors | DONE for bounded run | Use larger/repeated run only if performance demo is needed |
 | Streaming data pipeline | Current branch | Kafka events + Historical Gold | Live Gold at `s3a://urbanflow/gold/live_zone_metrics/task6/task6_20260914_003/` | `end-to-end-streaming.md`; 4394 reference rows = 4394 live rows; 0 mismatches | DONE for bounded data pipeline | App visual smoke if UI demo is required |
-| Analytics app | Current branch | Live Gold / Historical Gold | Streamlit map and metrics | Not smoke-tested against run-scoped Live Gold yet | TODO | Point app/data access at generated Gold and take a smoke result |
-| ML experiment | New/experimental work | Canonical Silver | Demand forecast model + report | No DATA-GO, DISTRIBUTION-GO, or QUALITY-GO yet | NOT STARTED | Start only after choosing ML scope and data period |
+| Analytics app | Current branch | Live Gold / Historical Gold | Streamlit map and metrics | `analytics-smoke.md`; 4394 view rows; Streamlit HTTP 200 on `127.0.0.1:8501` | DONE for smoke | Keep running app for demo or stop PID `14016` when finished |
+| ML experiment | New/experimental work | Canonical Silver | Demand forecast model + report | No DATA-GO, DISTRIBUTION-GO, or QUALITY-GO yet | NOT STARTED | Start Layer 5: ML DATA-GO audit and experiment scaffold |
 
 ### How to track progress
 
@@ -217,6 +217,7 @@ Spark/Kafka/S3A runtime      DONE
 Kafka -> Spark boundary      DONE
 Batch Gold -> Streaming      DONE
 Integrated Streaming demo    DONE for bounded data pipeline
+Analytics app smoke          DONE
 ML experiment                NOT STARTED: starts after Streaming integration checkpoint
 ```
 
@@ -266,6 +267,7 @@ the matching gate below has fresh evidence.
 | Kafka -> Spark boundary | real Kafka topic, Spark reads events, malformed row remains visible | commit `556ecbb`; `kafka-spark-smoke.md` | DONE |
 | Batch Gold -> Streaming boundary | real Parquet at `s3a://urbanflow/gold/historical_zone_baseline/` loads and validates | `batch-gold-boundary.md`; row count 534240; duplicate keys 0 | DONE |
 | Integrated demo | Kafka + Historical Gold -> Live Gold exact reference comparison | `end-to-end-streaming.md`; run `task6-20260914-003`; 10000 events; 4394 Live rows; 0 mismatches | DONE |
+| Analytics app smoke | app reads Gold only and prepares map/table/chart-ready rows | `analytics-smoke.md`; 4394 view rows; HTTP 200 from Streamlit | DONE |
 | ML DATA-GO | canonical Silver covers required time periods | not checked yet | NOT STARTED |
 | ML DISTRIBUTION-GO | Spark master has two workers and event logs show two executors doing work | not checked yet | NOT STARTED |
 | ML QUALITY-GO | GBT beats baselines on untouched test period | not checked yet | NOT STARTED |

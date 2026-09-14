@@ -19,6 +19,48 @@ def test_missing_columns_are_rejected(tmp_path):
         GoldReader(str(broken), str(broken)).live()
 
 
+def test_s3a_paths_are_read_with_seaweedfs_storage_options(monkeypatch):
+    import pandas as pd
+    from analytics_app import data_access
+
+    calls = []
+
+    def fake_read_parquet(path, **kwargs):
+        calls.append((path, kwargs))
+        return pd.DataFrame({
+            "window_start": ["2023-02-01T00:00:00Z"],
+            "window_end": ["2023-02-01T00:05:00Z"],
+            "pickup_zone_id": [230],
+            "current_trip_count": [1],
+            "historical_mean_trip_count": [0.5],
+            "demand_ratio": [2.0],
+            "z_score": [1.0],
+        })
+
+    monkeypatch.setenv("URBANFLOW_S3_ENDPOINT", "http://localhost:8333")
+    monkeypatch.setattr(data_access.pd, "read_parquet", fake_read_parquet)
+
+    frame = data_access.GoldReader(
+        "unused.jsonl",
+        "s3a://urbanflow/gold/live_zone_metrics/task6/task6_20260914_003/",
+    ).live()
+
+    assert len(frame) == 1
+    assert calls == [
+        (
+            "s3://urbanflow/gold/live_zone_metrics/task6/task6_20260914_003/",
+            {
+                "storage_options": {
+                    "client_kwargs": {"endpoint_url": "http://localhost:8333"},
+                    "key": "minioadmin",
+                    "secret": "minioadmin",
+                    "use_ssl": False,
+                }
+            },
+        )
+    ]
+
+
 def test_prepare_live_view_uses_new_york_time_and_zone_names(foundation):
     from analytics_app.data_access import GoldReader, prepare_live_view
     from analytics_app.zones import load_zone_lookup
