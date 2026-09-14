@@ -148,6 +148,29 @@ code changes:
 analytics_app/data_access.py now handles s3a:// paths through s3fs using
 URBANFLOW_S3_ENDPOINT/AWS credentials.
 evidence file: urbanflow-streaming/docs/results/analytics-smoke.md
+
+2026-09-14 ML Silver DATA-GO audit:
+result: FAIL
+silver input:
+s3a://urbanflow/silver/trips/
+total rows: 5,930,325
+required months:
+2022-08, 2022-09, 2022-10, 2022-11, 2022-12, 2023-01, 2023-02
+observed months:
+2008-12, 2009-01, 2022-10, 2022-12, 2023-01, 2023-02, 2023-03
+missing required months:
+2022-08, 2022-09, 2022-11
+null counts on required non-null columns: all 0
+invalid range counts:
+dropoff_before_pickup=0
+negative_fare_amount=0
+negative_trip_distance=0
+negative_trip_duration=0
+decision:
+Credible ML training is blocked. Do not train or report a real demand forecast
+model until the missing canonical Silver months exist, unless the scope is
+explicitly downgraded to a smoke-only ML demo.
+evidence file: urbanflow-ml/docs/results/silver-audit.md
 ```
 
 Working tree at snapshot time:
@@ -468,6 +491,6 @@ current demand vs predicted demand
    branch such as `origin/howie`.
 3. For Streaming, keep the Streamlit app running only while demoing, or stop
    PID `14016` when finished.
-4. For ML, do a focused research pass before coding. The research question
-   should be: "Which one useful Spark MLlib model should UrbanFlow train from
-   NYC TLC trips, and how will we prove it helps?"
+4. For ML, choose one of two paths:
+   produce the missing canonical Silver months for DATA-GO, or explicitly
+   downgrade to a smoke-only ML demo that makes no real model-quality claim.

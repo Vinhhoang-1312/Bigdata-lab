@@ -1,0 +1,19 @@
+foundation_version: "1.0.0"
+profile: integrated
+
+paths:
+  silver: "s3a://urbanflow/silver/trips/"
+  work: "s3a://urbanflow/dev/ml/"
+  reports: "urbanflow-ml/docs/results"
+
+forecast:
+  source_warmup_start: "2022-08-01"
+  train_start: "2022-08-08"
+  train_end: "2022-12-31"
+  validation_start: "2023-01-01"
+  validation_end: "2023-01-31"
+  test_start: "2023-02-01"
+  test_end: "2023-02-28"
+  bucket_minutes: 30
+  horizon_minutes: 30
+  seed: 20260914

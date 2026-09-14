@@ -88,7 +88,7 @@ Read this table first to know where the project is now.
 | Replay Kafka producer | Replay branch | Silver replay period | 10000 Kafka events for run `task6-20260914-003` | Replay output: 10000 sent, 0 rejected, 0 send errors | DONE for bounded run | Use larger/repeated run only if performance demo is needed |
 | Streaming data pipeline | Current branch | Kafka events + Historical Gold | Live Gold at `s3a://urbanflow/gold/live_zone_metrics/task6/task6_20260914_003/` | `end-to-end-streaming.md`; 4394 reference rows = 4394 live rows; 0 mismatches | DONE for bounded data pipeline | App visual smoke if UI demo is required |
 | Analytics app | Current branch | Live Gold / Historical Gold | Streamlit map and metrics | `analytics-smoke.md`; 4394 view rows; Streamlit HTTP 200 on `127.0.0.1:8501` | DONE for smoke | Keep running app for demo or stop PID `14016` when finished |
-| ML experiment | New/experimental work | Canonical Silver | Demand forecast model + report | No DATA-GO, DISTRIBUTION-GO, or QUALITY-GO yet | NOT STARTED | Start Layer 5: ML DATA-GO audit and experiment scaffold |
+| ML experiment | New/experimental work | Canonical Silver | Demand forecast model + report | `silver-audit.md`; 5930325 Silver rows; missing required months `2022-08`, `2022-09`, `2022-11` | BLOCKED before credible training | Produce missing canonical Silver months or switch to smoke-only ML scope |
 
 ### How to track progress
 
@@ -218,7 +218,7 @@ Kafka -> Spark boundary      DONE
 Batch Gold -> Streaming      DONE
 Integrated Streaming demo    DONE for bounded data pipeline
 Analytics app smoke          DONE
-ML experiment                NOT STARTED: starts after Streaming integration checkpoint
+ML experiment                STARTED: DATA-GO failed, training blocked
 ```
 
 ### Storage map
@@ -268,7 +268,7 @@ the matching gate below has fresh evidence.
 | Batch Gold -> Streaming boundary | real Parquet at `s3a://urbanflow/gold/historical_zone_baseline/` loads and validates | `batch-gold-boundary.md`; row count 534240; duplicate keys 0 | DONE |
 | Integrated demo | Kafka + Historical Gold -> Live Gold exact reference comparison | `end-to-end-streaming.md`; run `task6-20260914-003`; 10000 events; 4394 Live rows; 0 mismatches | DONE |
 | Analytics app smoke | app reads Gold only and prepares map/table/chart-ready rows | `analytics-smoke.md`; 4394 view rows; HTTP 200 from Streamlit | DONE |
-| ML DATA-GO | canonical Silver covers required time periods | not checked yet | NOT STARTED |
+| ML DATA-GO | canonical Silver covers required time periods | `silver-audit.md`; missing `2022-08`, `2022-09`, `2022-11` | FAIL |
 | ML DISTRIBUTION-GO | Spark master has two workers and event logs show two executors doing work | not checked yet | NOT STARTED |
 | ML QUALITY-GO | GBT beats baselines on untouched test period | not checked yet | NOT STARTED |
 
