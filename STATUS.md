@@ -211,6 +211,24 @@ Task 9 smoke is open. This proves the demand-frame builder can create and write
 a zero-inclusive one-day development frame. It does not yet claim the full
 August 2022 through February 2023 training frame or model quality.
 evidence file: urbanflow-ml/docs/results/demand-frame-smoke.md
+
+2026-09-15 ML Leakage-safe feature unit gate:
+result: PASS
+Spark test command:
+docker-compose --profile integration run --rm spark-submit /workspace/urbanflow-ml/tests/test_features.py
+test result:
+Ran 5 tests in 34.127s
+OK
+coverage:
+- target label changes do not alter lag or trailing features for that target row
+- trailing_2h_mean uses the prior four valid windows and excludes the target
+- previous-day lag joins only an earlier service date with matching zone and slot
+- missing previous-day/week lag values are filled with 0.0 and explicit flags
+- per-zone windows do not mix zones
+- spring-forward gaps use the previous valid wall-clock bucket, not a future row
+- cyclical time features are deterministic and do not require fitted scalers
+decision:
+Task 10 unit gate is open. The project can move to honest baselines and metrics.
 ```
 
 Working tree at snapshot time:
@@ -532,5 +550,5 @@ current demand vs predicted demand
 3. For Streaming, keep the Streamlit app running only while demoing, or stop
    PID `14016` when finished.
 4. For ML, choose one of two paths:
-   continue from demand-frame smoke PASS into leakage-safe features, baseline
-   evaluation, distributed Spark MLlib training, and final QUALITY-GO decision.
+   continue from leakage-safe feature gate PASS into baseline evaluation,
+   distributed Spark MLlib training, and final QUALITY-GO decision.

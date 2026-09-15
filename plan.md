@@ -90,7 +90,7 @@ Read this table first to know where the project is now.
 | Replay Kafka producer | Replay branch | Silver replay period | 10000 Kafka events for run `task6-20260914-003` | Replay output: 10000 sent, 0 rejected, 0 send errors | DONE for bounded run | Use larger/repeated run only if performance demo is needed |
 | Streaming data pipeline | Current branch | Kafka events + Historical Gold | Live Gold at `s3a://urbanflow/gold/live_zone_metrics/task6/task6_20260914_003/` | `end-to-end-streaming.md`; 4394 reference rows = 4394 live rows; 0 mismatches | DONE for bounded data pipeline | App visual smoke if UI demo is required |
 | Analytics app | Current branch | Live Gold / Historical Gold | Streamlit map and metrics | `analytics-smoke.md`; 4394 view rows; Streamlit HTTP 200 on `127.0.0.1:8501` | DONE for smoke | Keep running app for demo or stop PID `14016` when finished |
-| ML experiment | New/experimental work | Canonical Silver | Demand forecast model + report | `silver-audit.md`; 15448035 Silver rows; `demand-frame-smoke.md`; 12720 rows for one-day smoke | DATA-GO PASS, demand-frame smoke PASS | Build leakage-safe features, baselines, then distributed GBT |
+| ML experiment | New/experimental work | Canonical Silver | Demand forecast model + report | `silver-audit.md`; `demand-frame-smoke.md`; feature tests cover leakage and DST behavior | DATA-GO PASS, demand-frame smoke PASS, feature unit gate PASS | Build baselines, metrics, then distributed GBT |
 
 ### How to track progress
 
@@ -236,6 +236,13 @@ ML Demand Frame smoke:
   rows: 12720
   output_path: s3a://urbanflow/dev/ml/demand_frame/task9-smoke-20260915-001/
   evidence: urbanflow-ml/docs/results/demand-frame-smoke.md
+
+ML Feature unit gate:
+  PASS
+  tests: 5 Spark unittest cases
+  covers: target leakage, trailing window exclusion, previous-day lag,
+          missing lag flags, zone isolation, spring-forward gap behavior,
+          deterministic cyclical features
 ```
 
 So the project is here:
@@ -248,7 +255,7 @@ Kafka -> Spark boundary      DONE
 Batch Gold -> Streaming      DONE
 Integrated Streaming demo    DONE for bounded data pipeline
 Analytics app smoke          DONE
-ML experiment                CURRENT LAYER: demand-frame smoke PASS, feature/model work next
+ML experiment                CURRENT LAYER: feature unit gate PASS, baseline work next
 ```
 
 ### Storage map
@@ -300,15 +307,16 @@ the matching gate below has fresh evidence.
 | Analytics app smoke | app reads Gold only and prepares map/table/chart-ready rows | `analytics-smoke.md`; 4394 view rows; HTTP 200 from Streamlit | DONE |
 | ML DATA-GO | canonical Silver covers required time periods | `silver-audit.md`; 15448035 rows; missing months none; invalid range counts 0 | PASS |
 | ML demand frame smoke | zero-inclusive zone x 30-minute frame writes to dev S3A path | `demand-frame-smoke.md`; 265 zones x 48 slots = 12720 rows | PASS |
+| ML leakage-safe features | features use only prior windows or earlier service dates | Spark feature tests; 5 cases; target label changes do not alter features | PASS |
 | ML DISTRIBUTION-GO | Spark master has two workers and event logs show two executors doing work | not checked yet | NOT STARTED |
 | ML QUALITY-GO | GBT beats baselines on untouched test period | not checked yet | NOT STARTED |
 
 ### What must happen next
 
 The project is now at Layer 5. The integrated Streaming data-pipeline demo,
-Analytics smoke, ML Silver DATA-GO, and one-day demand-frame writer smoke have
-passed. The next implementation block is leakage-safe feature generation,
-baseline evaluation, and then distributed model training.
+Analytics smoke, ML Silver DATA-GO, one-day demand-frame writer smoke, and
+leakage-safe feature unit gate have passed. The next implementation block is
+baseline evaluation and then distributed model training.
 
 Streaming evidence:
 
