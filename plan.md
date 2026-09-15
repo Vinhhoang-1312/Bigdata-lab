@@ -90,7 +90,7 @@ Read this table first to know where the project is now.
 | Replay Kafka producer | Replay branch | Silver replay period | 10000 Kafka events for run `task6-20260914-003` | Replay output: 10000 sent, 0 rejected, 0 send errors | DONE for bounded run | Use larger/repeated run only if performance demo is needed |
 | Streaming data pipeline | Current branch | Kafka events + Historical Gold | Live Gold at `s3a://urbanflow/gold/live_zone_metrics/task6/task6_20260914_003/` | `end-to-end-streaming.md`; 4394 reference rows = 4394 live rows; 0 mismatches | DONE for bounded data pipeline | App visual smoke if UI demo is required |
 | Analytics app | Current branch | Live Gold / Historical Gold | Streamlit map and metrics | `analytics-smoke.md`; 4394 view rows; Streamlit HTTP 200 on `127.0.0.1:8501` | DONE for smoke | Keep running app for demo or stop PID `14016` when finished |
-| ML experiment | New/experimental work | Canonical Silver | Demand forecast model + report | `silver-audit.md`; 15448035 Silver rows; required months present; invalid range counts 0 | DATA-GO PASS, model work not started | Build 30-minute demand frame, leakage-safe features, baselines, then distributed GBT |
+| ML experiment | New/experimental work | Canonical Silver | Demand forecast model + report | `silver-audit.md`; 15448035 Silver rows; `demand-frame-smoke.md`; 12720 rows for one-day smoke | DATA-GO PASS, demand-frame smoke PASS | Build leakage-safe features, baselines, then distributed GBT |
 
 ### How to track progress
 
@@ -227,6 +227,15 @@ ML Silver DATA-GO:
   missing required months: none
   invalid range counts: all 0
   evidence: urbanflow-ml/docs/results/silver-audit.md
+
+ML Demand Frame smoke:
+  PASS
+  run_id: task9-smoke-20260915-001
+  date range: 2023-01-02 to 2023-01-02
+  zones: 265
+  rows: 12720
+  output_path: s3a://urbanflow/dev/ml/demand_frame/task9-smoke-20260915-001/
+  evidence: urbanflow-ml/docs/results/demand-frame-smoke.md
 ```
 
 So the project is here:
@@ -239,7 +248,7 @@ Kafka -> Spark boundary      DONE
 Batch Gold -> Streaming      DONE
 Integrated Streaming demo    DONE for bounded data pipeline
 Analytics app smoke          DONE
-ML experiment                CURRENT LAYER: DATA-GO PASS, feature/model work next
+ML experiment                CURRENT LAYER: demand-frame smoke PASS, feature/model work next
 ```
 
 ### Storage map
@@ -290,14 +299,16 @@ the matching gate below has fresh evidence.
 | Integrated demo | Kafka + Historical Gold -> Live Gold exact reference comparison | `end-to-end-streaming.md`; run `task6-20260914-003`; 10000 events; 4394 Live rows; 0 mismatches | DONE |
 | Analytics app smoke | app reads Gold only and prepares map/table/chart-ready rows | `analytics-smoke.md`; 4394 view rows; HTTP 200 from Streamlit | DONE |
 | ML DATA-GO | canonical Silver covers required time periods | `silver-audit.md`; 15448035 rows; missing months none; invalid range counts 0 | PASS |
+| ML demand frame smoke | zero-inclusive zone x 30-minute frame writes to dev S3A path | `demand-frame-smoke.md`; 265 zones x 48 slots = 12720 rows | PASS |
 | ML DISTRIBUTION-GO | Spark master has two workers and event logs show two executors doing work | not checked yet | NOT STARTED |
 | ML QUALITY-GO | GBT beats baselines on untouched test period | not checked yet | NOT STARTED |
 
 ### What must happen next
 
-The project is now at Layer 5. The integrated Streaming data-pipeline demo and
-Analytics smoke have passed, and the ML Silver DATA-GO audit now passes. The
-next implementation block is the ML demand frame and baseline/model pipeline.
+The project is now at Layer 5. The integrated Streaming data-pipeline demo,
+Analytics smoke, ML Silver DATA-GO, and one-day demand-frame writer smoke have
+passed. The next implementation block is leakage-safe feature generation,
+baseline evaluation, and then distributed model training.
 
 Streaming evidence:
 
@@ -336,6 +347,22 @@ count assertion compares selected-period input rows with the already-appended
 Bronze total. The follow-up Bronze-to-Silver job exited 0 with
 `BRONZE TO SILVER = PASS`, and the independent ML audit is the current gate for
 whether training can proceed.
+
+Demand-frame evidence command:
+
+```powershell
+docker-compose --profile integration run --rm spark-submit `
+  --conf spark.ui.showConsoleProgress=false `
+  --master local[2] `
+  /workspace/urbanflow-ml/spark/build_demand_frame.py `
+  --run-id task9-smoke-20260915-001 `
+  --start-date 2023-01-02 `
+  --end-date 2023-01-02 `
+  --zone-lookup s3a://urbanflow/bronze/zone_lookup/
+```
+
+This returned `ML DEMAND-FRAME = PASS` on 2026-09-15 with 265 zones and 12720
+rows for one local day. This is a writer smoke, not the full training frame.
 
 ---
 

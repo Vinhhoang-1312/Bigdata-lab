@@ -186,6 +186,31 @@ frame, leakage-safe features, baselines, distributed Spark MLlib training, and
 quality evaluation. Do not claim model quality until DISTRIBUTION-GO and
 QUALITY-GO are verified.
 evidence file: urbanflow-ml/docs/results/silver-audit.md
+
+2026-09-15 ML Demand Frame smoke:
+result: PASS
+run id: task9-smoke-20260915-001
+silver input:
+s3a://urbanflow/silver/trips/
+zone lookup input:
+s3a://urbanflow/bronze/zone_lookup/
+date range:
+2023-01-02 to 2023-01-02
+output path:
+s3a://urbanflow/dev/ml/demand_frame/task9-smoke-20260915-001/
+zones: 265
+rows: 12,720
+row math:
+265 zones * 48 half-hour slots = 12,720 rows
+test coverage:
+Spark container unittest covers zero-trip zones, 00/30 minute boundaries,
+unique keys, spring-forward invalid slots, and fall-back wall-clock bucket
+combining.
+decision:
+Task 9 smoke is open. This proves the demand-frame builder can create and write
+a zero-inclusive one-day development frame. It does not yet claim the full
+August 2022 through February 2023 training frame or model quality.
+evidence file: urbanflow-ml/docs/results/demand-frame-smoke.md
 ```
 
 Working tree at snapshot time:
@@ -507,6 +532,5 @@ current demand vs predicted demand
 3. For Streaming, keep the Streamlit app running only while demoing, or stop
    PID `14016` when finished.
 4. For ML, choose one of two paths:
-   continue from DATA-GO PASS into the 30-minute demand frame, leakage-safe
-   features, baseline evaluation, distributed Spark MLlib training, and final
-   QUALITY-GO decision.
+   continue from demand-frame smoke PASS into leakage-safe features, baseline
+   evaluation, distributed Spark MLlib training, and final QUALITY-GO decision.
