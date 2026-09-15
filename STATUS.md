@@ -229,6 +229,40 @@ coverage:
 - cyclical time features are deterministic and do not require fitted scalers
 decision:
 Task 10 unit gate is open. The project can move to honest baselines and metrics.
+
+2026-09-15 ML Baseline and evaluation metrics gate:
+result: PASS
+Spark evaluation test command:
+docker-compose --profile integration run --rm spark-submit /workspace/urbanflow-ml/tests/test_evaluation.py
+test result:
+Ran 6 tests in 39.512s
+OK
+regression check command:
+docker-compose --profile integration run --rm spark-submit /workspace/urbanflow-ml/tests/test_features.py
+test result:
+Ran 5 tests in 35.181s
+OK
+local syntax and package test commands:
+.\urbanflow-streaming\.venv\Scripts\python.exe -m py_compile urbanflow-ml\forecasting\baselines.py urbanflow-ml\forecasting\evaluation.py urbanflow-ml\tests\test_evaluation.py
+.\urbanflow-streaming\.venv\Scripts\python.exe -m pytest -q urbanflow-ml\tests --basetemp .tmp\pytest-ml-local
+local pytest result:
+4 passed, 3 skipped in 0.06s
+coverage:
+- MAE, RMSE, WAPE, signed bias, clamp rate use hand-calculated expected values
+- WAPE returns null with a clear warning when total actual demand is zero
+- top-k recall measures overlap between actual peak zones and predicted peak zones
+- summary frames cover peak-window, borough, demand-decile, and per-zone slices
+- seasonal naive prediction uses only the already-built same-slot previous-week feature
+- historical mean baseline fits only training rows keyed by zone, day-of-week, and half-hour slot
+implemented files:
+urbanflow-ml/forecasting/baselines.py
+urbanflow-ml/forecasting/evaluation.py
+urbanflow-ml/tests/test_evaluation.py
+decision:
+Task 11 gate is open. The project can move to Task 12: train the distributed
+Spark MLlib GBT demand model, then compare it with seasonal-naive and
+train-only historical-mean baselines. ML DISTRIBUTION-GO and QUALITY-GO are
+still not claimed.
 ```
 
 Working tree at snapshot time:
@@ -550,5 +584,5 @@ current demand vs predicted demand
 3. For Streaming, keep the Streamlit app running only while demoing, or stop
    PID `14016` when finished.
 4. For ML, choose one of two paths:
-   continue from leakage-safe feature gate PASS into baseline evaluation,
-   distributed Spark MLlib training, and final QUALITY-GO decision.
+   continue from baseline/metrics gate PASS into distributed Spark MLlib
+   training and final QUALITY-GO decision.
