@@ -1,8 +1,11 @@
 name: urbanflow
 
-x-spark-image: &spark-image apache/spark:4.2.0-python3
+x-spark-image: &spark-image urbanflow/spark-ml:4.2.0-python3
+x-spark-build: &spark-build
+  context: ./docker/spark-ml
 x-spark-common: &spark-common
   image: *spark-image
+  build: *spark-build
   restart: unless-stopped
   environment:
     PYTHONPATH: /workspace/urbanflow-streaming
@@ -201,6 +204,7 @@ services:
 
   spark-submit:
     image: *spark-image
+    build: *spark-build
     user: root
     working_dir: /workspace
     environment:

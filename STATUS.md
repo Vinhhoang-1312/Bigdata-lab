@@ -263,6 +263,54 @@ Task 11 gate is open. The project can move to Task 12: train the distributed
 Spark MLlib GBT demand model, then compare it with seasonal-naive and
 train-only historical-mean baselines. ML DISTRIBUTION-GO and QUALITY-GO are
 still not claimed.
+
+2026-09-15 ML GBT model unit gate:
+result: PASS
+environment change:
+Spark services now use local image `urbanflow/spark-ml:4.2.0-python3`, built
+from `docker/spark-ml/Dockerfile`. The image installs `numpy==2.2.6` and
+`PyYAML==6.0.3` because `pyspark.ml` requires numpy and the training script
+reads YAML config.
+compose check:
+docker-compose config --quiet exited 0
+docker build check:
+docker-compose build spark-submit exited 0
+Spark model test command:
+docker-compose --profile integration run --rm spark-submit /workspace/urbanflow-ml/tests/test_model.py
+test result:
+Ran 3 tests in 40.495s
+OK
+regression check command:
+docker-compose --profile integration run --rm spark-submit /workspace/urbanflow-ml/tests/test_evaluation.py
+test result:
+Ran 6 tests in 25.595s
+OK
+local syntax and package test commands:
+.\urbanflow-streaming\.venv\Scripts\python.exe -m py_compile urbanflow-ml\forecasting\model.py urbanflow-ml\spark\train_demand_forecast.py urbanflow-ml\tests\test_model.py
+.\urbanflow-streaming\.venv\Scripts\python.exe -m pytest -q urbanflow-ml\tests --basetemp .tmp\pytest-ml-local
+local pytest result:
+4 passed, 4 skipped in 0.05s
+implemented files:
+docker/spark-ml/Dockerfile
+urbanflow-ml/forecasting/model.py
+urbanflow-ml/spark/train_demand_forecast.py
+urbanflow-ml/tests/test_model.py
+compose.yaml
+coverage:
+- Spark MLlib Pipeline fits a small two-zone frame
+- pipeline uses StringIndexer, OneHotEncoder, VectorAssembler, and GBTRegressor
+- predictions retain key columns and finite `raw_prediction`
+- `predicted_trip_count` clamps negative raw predictions at 0.0
+- PipelineModel saves and loads successfully
+- parameter selection evaluates validation MAE and keeps deterministic tie breakers
+- training script can build demand frame/features, split train/validation/test,
+  select bounded candidates, refit train+validation, and save immutable run
+  paths; full distributed run is deferred to Task 13
+decision:
+Task 12 unit gate is open. This proves the model code and training entrypoint
+are structurally runnable in Spark MLlib. It does not prove two-worker
+distributed execution or final model quality. The project can move to Task 13:
+event-log verification for DISTRIBUTION-GO.
 ```
 
 Working tree at snapshot time:
@@ -584,5 +632,5 @@ current demand vs predicted demand
 3. For Streaming, keep the Streamlit app running only while demoing, or stop
    PID `14016` when finished.
 4. For ML, choose one of two paths:
-   continue from baseline/metrics gate PASS into distributed Spark MLlib
-   training and final QUALITY-GO decision.
+   continue from model unit gate PASS into two-worker distributed execution
+   proof and final QUALITY-GO decision.

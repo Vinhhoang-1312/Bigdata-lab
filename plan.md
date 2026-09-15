@@ -90,7 +90,7 @@ Read this table first to know where the project is now.
 | Replay Kafka producer | Replay branch | Silver replay period | 10000 Kafka events for run `task6-20260914-003` | Replay output: 10000 sent, 0 rejected, 0 send errors | DONE for bounded run | Use larger/repeated run only if performance demo is needed |
 | Streaming data pipeline | Current branch | Kafka events + Historical Gold | Live Gold at `s3a://urbanflow/gold/live_zone_metrics/task6/task6_20260914_003/` | `end-to-end-streaming.md`; 4394 reference rows = 4394 live rows; 0 mismatches | DONE for bounded data pipeline | App visual smoke if UI demo is required |
 | Analytics app | Current branch | Live Gold / Historical Gold | Streamlit map and metrics | `analytics-smoke.md`; 4394 view rows; Streamlit HTTP 200 on `127.0.0.1:8501` | DONE for smoke | Keep running app for demo or stop PID `14016` when finished |
-| ML experiment | New/experimental work | Canonical Silver | Demand forecast model + report | `silver-audit.md`; `demand-frame-smoke.md`; feature tests cover leakage and DST behavior; Spark evaluation tests cover metrics and baseline leakage | DATA-GO PASS, demand-frame smoke PASS, feature unit gate PASS, baseline/metrics gate PASS | Train distributed GBT and compare with baselines |
+| ML experiment | New/experimental work | Canonical Silver | Demand forecast model + report | `silver-audit.md`; `demand-frame-smoke.md`; feature/evaluation/model Spark tests cover leakage, metrics, and GBT pipeline behavior | DATA-GO PASS, demand-frame smoke PASS, feature unit gate PASS, baseline/metrics gate PASS, model unit gate PASS | Prove two-worker distribution, then evaluate quality |
 
 ### How to track progress
 
@@ -255,7 +255,7 @@ Kafka -> Spark boundary      DONE
 Batch Gold -> Streaming      DONE
 Integrated Streaming demo    DONE for bounded data pipeline
 Analytics app smoke          DONE
-ML experiment                CURRENT LAYER: baseline/metrics gate PASS, distributed GBT training next
+ML experiment                CURRENT LAYER: model unit gate PASS, two-worker distribution proof next
 ```
 
 ### Storage map
@@ -309,6 +309,7 @@ the matching gate below has fresh evidence.
 | ML demand frame smoke | zero-inclusive zone x 30-minute frame writes to dev S3A path | `demand-frame-smoke.md`; 265 zones x 48 slots = 12720 rows | PASS |
 | ML leakage-safe features | features use only prior windows or earlier service dates | Spark feature tests; 5 cases; target label changes do not alter features | PASS |
 | ML baseline/metrics gate | honest train-only baselines and deterministic evaluation metrics | Spark evaluation tests; 6 cases; MAE/RMSE/WAPE/bias/clamp/top-k recall, summary slices, and leakage checks | PASS |
+| ML model unit gate | Spark MLlib GBT pipeline fits, predicts, clamps, saves, loads, and selects params chronologically | Spark model tests; 3 cases; custom Spark ML image includes numpy/PyYAML | PASS |
 | ML DISTRIBUTION-GO | Spark master has two workers and event logs show two executors doing work | not checked yet | NOT STARTED |
 | ML QUALITY-GO | GBT beats baselines on untouched test period | not checked yet | NOT STARTED |
 
@@ -316,8 +317,9 @@ the matching gate below has fresh evidence.
 
 The project is now at Layer 5. The integrated Streaming data-pipeline demo,
 Analytics smoke, ML Silver DATA-GO, one-day demand-frame writer smoke,
-leakage-safe feature unit gate, and baseline/metrics gate have passed. The
-next implementation block is distributed model training.
+leakage-safe feature unit gate, baseline/metrics gate, and model unit gate have
+passed. The next implementation block is the two-worker distributed execution
+proof.
 
 Streaming evidence:
 
@@ -1463,7 +1465,7 @@ git commit -m "feat(ml): add forecast baselines and evaluation metrics"
 - Produces: `select_params(train, validation, candidates) -> SelectionResult`.
 - Produces: saved `PipelineModel` and immutable run metadata.
 
-- [ ] **Step 1: Write a local two-zone model test**
+- [x] **Step 1: Write a local two-zone model test**
 
 Assert the pipeline fits, predicts, saves, loads, keeps key columns, and produces finite numeric predictions. Assert post-processing uses:
 
@@ -1471,17 +1473,17 @@ Assert the pipeline fits, predicts, saves, loads, keeps key columns, and produce
 predicted_trip_count = greatest(lit(0.0), col("raw_prediction"))
 ```
 
-- [ ] **Step 2: Confirm failure**
+- [x] **Step 2: Confirm failure**
 
 ```powershell
 pytest -q tests/test_model.py
 ```
 
-- [ ] **Step 3: Implement the feature pipeline**
+- [x] **Step 3: Implement the feature pipeline**
 
 Use `StringIndexer(handleInvalid="keep")` and `OneHotEncoder(handleInvalid="keep")` for zone identity, then `VectorAssembler`. Keep feature column names in run metadata.
 
-- [ ] **Step 4: Implement the first bounded parameter candidates**
+- [x] **Step 4: Implement the first bounded parameter candidates**
 
 Evaluate exactly these candidates on January validation only:
 
@@ -1503,18 +1505,22 @@ seed=20260913
 
 Select lowest validation MAE. Use lower depth, then fewer iterations as deterministic tie-breakers. Do not use Spark's default random `CrossValidator` or random `TrainValidationSplit`.
 
-- [ ] **Step 5: Refit once after selection**
+- [x] **Step 5: Refit once after selection**
 
 After selecting parameters, refit the final model on train plus validation. Do not read February test labels during selection or refit.
 
-- [ ] **Step 6: Persist model and predictions under immutable run ID**
+- [x] **Step 6: Persist model and predictions under immutable run ID**
 
 Fail if the target run path already exists. A run ID contains timestamp, short Git SHA, and config hash.
 
-- [ ] **Step 7: Run unit tests and commit**
+- [x] **Step 7: Run unit tests and commit**
 
 ```powershell
-pytest -q tests/test_model.py tests/test_evaluation.py
+docker-compose --profile integration run --rm spark-submit /workspace/urbanflow-ml/tests/test_model.py
+docker-compose --profile integration run --rm spark-submit /workspace/urbanflow-ml/tests/test_evaluation.py
+.\urbanflow-streaming\.venv\Scripts\python.exe -m pytest -q urbanflow-ml\tests --basetemp .tmp\pytest-ml-local
+.\urbanflow-streaming\.venv\Scripts\python.exe -m py_compile urbanflow-ml\forecasting\model.py urbanflow-ml\spark\train_demand_forecast.py urbanflow-ml\tests\test_model.py
+docker-compose config --quiet
 git add urbanflow-ml/forecasting/model.py urbanflow-ml/spark/train_demand_forecast.py urbanflow-ml/tests/test_model.py
 git commit -m "feat(ml): train global Spark GBT demand model"
 ```
