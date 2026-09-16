@@ -285,16 +285,16 @@ and 82 December trips, a successful run is `CURRENT-DATA GO`, not
 - Produces: `GTQNLite.forward(history, calendar, fixed_adjacency) -> [batch, zone, 3]`.
 - Produces: `pinball_loss(predictions, target, quantiles, weights) -> scalar`.
 
-- [ ] Write a shape test for batch 2, four zones, 16 history steps, and three quantiles.
-- [ ] Write a behavior test proving every output satisfies P10 <= P50 <= P90.
-- [ ] Write a finite backward test covering adaptive adjacency and graph gate parameters.
-- [ ] Write literal pinball-loss cases for under- and over-prediction.
-- [ ] Run tests and observe missing API failures.
-- [ ] Implement gated dilated temporal blocks with residual connections and dropout.
-- [ ] Implement directed adaptive adjacency and one fixed/adaptive diffusion fusion layer.
-- [ ] Implement monotonic quantile construction using positive softplus deltas.
-- [ ] Run tests and keep the default model below the documented parameter budget.
-- [ ] Commit with `feat(ml): add graph temporal quantile network`.
+- [x] Write a shape test for batch 2, four zones, 16 history steps, and three quantiles.
+- [x] Write a behavior test proving every output satisfies P10 <= P50 <= P90.
+- [x] Write a finite backward test covering adaptive adjacency and graph gate parameters.
+- [x] Write literal pinball-loss cases for under- and over-prediction.
+- [x] Run tests and observe missing API failures.
+- [x] Implement gated dilated temporal blocks with residual connections and dropout.
+- [x] Implement directed adaptive adjacency and one fixed/adaptive diffusion fusion layer.
+- [x] Implement monotonic quantile construction using positive softplus deltas.
+- [x] Run five tests, including the real `[1, 265, 336, 2]` input shape, under the parameter budget.
+- [x] Commit with `feat(ml): add graph temporal quantile network`.
 
 ### Task 7: Implement trainer, early stopping, checkpoint parity, and metrics
 
