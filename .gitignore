@@ -220,6 +220,7 @@ urbanflow-batch/output/
 urbanflow-batch/.local/
 urbanflow-replay/output/
 urbanflow-streaming/output/
+urbanflow-ml/output/
 
 # Converted TLC shapefile (runtime map uses taxi_zones.geojson)
 urbanflow-streaming/analytics_app/data/taxi_zones_shp/

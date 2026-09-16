@@ -66,7 +66,8 @@ def default_run_id(config: dict) -> str:
 def path_exists(spark: SparkSession, path: str) -> bool:
     jvm = spark.sparkContext._jvm
     hadoop_conf = spark.sparkContext._jsc.hadoopConfiguration()
-    return bool(jvm.org.apache.hadoop.fs.FileSystem.get(hadoop_conf).exists(jvm.org.apache.hadoop.fs.Path(path)))
+    hadoop_path = jvm.org.apache.hadoop.fs.Path(path)
+    return bool(hadoop_path.getFileSystem(hadoop_conf).exists(hadoop_path))
 
 
 def date_filter(frame, start_date: str, end_date: str):
