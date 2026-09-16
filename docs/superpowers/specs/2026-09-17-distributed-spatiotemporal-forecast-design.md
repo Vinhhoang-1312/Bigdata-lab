@@ -214,6 +214,24 @@ research result, not a production recommendation.
   best baseline for deployment.
 - Worker loss: fail the run; do not publish a checkpoint from a partial world.
 
+## Restart and Resume Contract
+
+Long runs must survive a host shutdown without silently starting from zero.
+
+- Every pipeline stage writes under one immutable `run-id` and publishes PASS
+  metadata only after its artifact can be read back and validated.
+- `--resume` skips a stage only when both the artifact and its PASS metadata
+  exist. A partial stage is rebuilt within that exact generated stage path.
+- DDP rank 0 writes a checkpoint after every epoch to SeaweedFS. The checkpoint
+  contains model, optimizer, scheduler, epoch, best validation metric, early
+  stopping state, config hash, dataset fingerprint, and random-number states.
+- Resume refuses a checkpoint whose config hash or dataset fingerprint differs
+  from the requested run.
+- Completed evaluation outputs are immutable. A later command reads them; it
+  does not overwrite them.
+- The same command with the same `run-id --resume` is the documented recovery
+  action after Docker or the host restarts.
+
 ## Operational Outputs
 
 Each run uses an immutable run ID under `s3a://urbanflow/dev/ml/runs/<run-id>/`

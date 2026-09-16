@@ -19,6 +19,7 @@
 - Train/validation/test are chronological; February 2023 is never used for fitting or tuning.
 - The zone graph and all scaling statistics use train data only.
 - Every generated run path is immutable and carries config, Git SHA, seed, dataset fingerprint, dependency versions, and timing.
+- Every long stage supports the same `run-id --resume`; epoch checkpoints are stored in SeaweedFS and validated against config hash plus dataset fingerprint.
 - Large tensors, Parquet, checkpoints, predictions, and event logs stay out of Git and in Docker/SeaweedFS storage on drive D where possible.
 - New behavior follows test-first RED-GREEN-REFACTOR.
 - A stage is complete only when its command, measured output, and evidence file exist.
@@ -221,15 +222,15 @@ and 82 December trips, a successful run is `CURRENT-DATA GO`, not
 - Produces: `build_training_arrays(demand_rows, zone_ids, split_config) -> dict[str, np.ndarray]`.
 - Produces: immutable `.npz` plus JSON metadata for DDP ranks.
 
-- [ ] Write tests with hand-checked two-zone timestamps for deterministic zone order and matrix values.
-- [ ] Add tests proving a missing bucket becomes zero while its observed mask is false.
-- [ ] Add a test proving dataset fingerprint changes when counts or zone order changes.
-- [ ] Run focused tests and observe missing API failures.
-- [ ] Implement compact float32 counts, boolean mask, timestamps, calendar matrix, and split indices.
-- [ ] Implement Spark writer using the existing zero-inclusive demand frame.
-- [ ] Validate no NaN/Inf, non-negative counts, exactly 265 unique zones, monotonic timestamps, and non-empty splits.
-- [ ] Run tests and a one-week S3A smoke artifact.
-- [ ] Commit with `feat(ml): build compact chronological tensor dataset`.
+- [x] Write tests with hand-checked two-zone timestamps for deterministic zone order and matrix values.
+- [x] Add tests proving a missing bucket becomes zero while its observed mask is false.
+- [x] Add a test proving dataset fingerprint changes when counts or zone order changes.
+- [x] Run focused tests and observe missing API failures.
+- [x] Implement compact float32 counts, boolean mask, timestamps, calendar matrix, and split indices.
+- [x] Implement Spark writer using the existing zero-inclusive demand frame.
+- [x] Validate no NaN/Inf, non-negative counts, exactly 265 unique zones, monotonic timestamps, and non-empty splits.
+- [x] Run local tests and full S3A artifact build/read-back verification for `gtqn-20260917-001`.
+- [x] Commit with `feat(ml): build compact chronological tensor dataset`.
 
 ### Task 4: Build a leakage-safe OD graph and robust scaler
 
@@ -244,15 +245,15 @@ and 82 December trips, a successful run is `CURRENT-DATA GO`, not
 - Produces: `build_od_adjacency(trips, zone_ids, train_end) -> np.ndarray`.
 - Produces: `RobustZoneScaler.fit(train_counts)`, `.transform()`, `.inverse_transform()`.
 
-- [ ] Write a directed three-zone fixture with literal expected row-normalized adjacency.
-- [ ] Write a test proving post-train trips do not affect adjacency.
-- [ ] Write scaler tests for zero-IQR sparse zones and round-trip inversion.
-- [ ] Run tests and observe missing API failures.
-- [ ] Implement Laplace-smoothed, row-normalized train-only OD adjacency with self loops.
-- [ ] Implement train-only `log1p` median/IQR scaling with safe scale 1.0 for zero IQR.
-- [ ] Store adjacency and scaler values in the tensor artifact and metadata.
-- [ ] Run focused tests and tensor smoke again.
-- [ ] Commit with `feat(ml): add train-only zone graph and robust scaling`.
+- [x] Write a directed three-zone fixture with literal expected row-normalized adjacency.
+- [x] Write a test proving post-train trips do not affect adjacency.
+- [x] Write scaler tests for zero-IQR sparse zones and round-trip inversion.
+- [x] Run tests and observe missing API failures.
+- [x] Implement Laplace-smoothed, row-normalized train-only OD adjacency with self loops.
+- [x] Implement train-only `log1p` median/IQR scaling with safe scale 1.0 for zero IQR.
+- [x] Store adjacency and scaler values in the tensor artifact and metadata.
+- [x] Run nine focused tests and tensor read-back verification.
+- [x] Commit with `feat(ml): add train-only zone graph and robust scaling`.
 
 ### Task 5: Implement sliding windows and deterministic distributed sampling
 

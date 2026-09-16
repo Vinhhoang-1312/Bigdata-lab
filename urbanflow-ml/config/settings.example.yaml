@@ -17,3 +17,24 @@ forecast:
   bucket_minutes: 30
   horizon_minutes: 30
   seed: 20260914
+
+tensor:
+  expected_zone_count: 265
+  lookback_buckets: 336
+
+model:
+  hidden_size: 32
+  zone_embedding_size: 16
+  dropout: 0.2
+  quantiles: [0.1, 0.5, 0.9]
+
+training:
+  seed: 20260917
+  batch_size_per_rank: 4
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  gradient_clip_norm: 1.0
+  max_epochs: 60
+  early_stopping_patience: 8
+  checkpoint_every_epochs: 1
+  num_processes: 2
