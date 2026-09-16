@@ -265,14 +265,14 @@ and 82 December trips, a successful run is `CURRENT-DATA GO`, not
 - Produces: `ZoneDemandDataset(arrays, split, lookback=336)`.
 - Produces: `(history, calendar, target, target_time_index)` tensors.
 
-- [ ] Write a small literal matrix test proving history ends at `t-1` and target is exactly `t`.
-- [ ] Test that train, validation, and test windows never cross their target boundaries.
-- [ ] Test deterministic rank-0/rank-1 sampler indices are disjoint and cover the epoch set.
-- [ ] Run focused tests and observe missing API failures.
-- [ ] Implement lazy slicing so windows are not materialized on disk.
-- [ ] Add sampler seeding by epoch and rank.
-- [ ] Run focused tests.
-- [ ] Commit with `feat(ml): add leakage-safe demand window dataset`.
+- [x] Write a small literal matrix test proving history ends at `t-1` and target is exactly `t`.
+- [x] Test that train, validation, and test windows never cross their target boundaries.
+- [x] Test deterministic rank-0/rank-1 sampler indices are disjoint and balanced for the epoch set.
+- [x] Run focused tests and observe missing API failures.
+- [x] Implement lazy slicing so windows are not materialized on disk.
+- [x] Add sampler seeding by epoch and rank.
+- [x] Run three focused tests in the pinned PyTorch image.
+- [x] Commit with `feat(ml): add leakage-safe demand window dataset`.
 
 ### Task 6: Implement GTQN-Lite with monotonic quantiles
 
