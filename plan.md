@@ -200,13 +200,13 @@ and 82 December trips, a successful run is `CURRENT-DATA GO`, not
 - Produces: Spark image containing pinned PyTorch, NumPy, PyArrow, and PyYAML.
 - Produces: two Spark workers with enough executor memory for CPU DDP.
 
-- [ ] Write a runtime test that imports `torch`, constructs a two-layer tensor operation, imports `TorchDistributor`, and prints exact versions.
-- [ ] Run in the current image and confirm failure because PyTorch is absent.
-- [ ] Pin a validated PyTorch CPU version and PyArrow version in the Spark image.
-- [ ] Increase worker/executor memory only within measured host/Docker capacity; keep generated storage on D.
-- [ ] Build the image and run `docker compose config --quiet`.
-- [ ] Run the runtime test inside `spark-submit` and record versions.
-- [ ] Commit with `build(ml): add reproducible PyTorch distributed runtime`.
+- [x] Write a runtime test that imports `torch`, constructs a two-layer tensor operation, imports `TorchDistributor`, and prints exact versions.
+- [x] Run in the current image and confirm failure because PyArrow/PyTorch are absent.
+- [x] Pin PyTorch 2.8.0 CPU and PyArrow 21.0.0 in the Spark image.
+- [x] Measure 15.73 GiB host RAM, 7.62 GiB Docker RAM, and set two 2 GiB one-core worker containers; generated Docker storage remains on D.
+- [x] Build the image and run `docker compose config --quiet`.
+- [x] Run the runtime test inside `spark-submit`: one test passes and exact versions are printed.
+- [x] Commit with `build(ml): add reproducible PyTorch distributed runtime`.
 
 ### Task 3: Build the compact chronological tensor artifact
 
