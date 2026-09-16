@@ -308,14 +308,14 @@ and 82 December trips, a successful run is `CURRENT-DATA GO`, not
 - Produces: `train_epoch`, `evaluate_epoch`, `EarlyStopper`, and serializable `TrainingResult`.
 - Produces: pinball, coverage, interval width, and interval-breach anomaly rows.
 
-- [ ] Write early-stopping tests for improvement, patience exhaustion, and best-state restoration.
-- [ ] Write a checkpoint reload test with prediction equality within `1e-6`.
-- [ ] Write hand-calculated coverage, interval-width, and anomaly-severity tests.
-- [ ] Run focused tests and observe missing API failures.
-- [ ] Implement AdamW, clipping at 1.0, plateau scheduling, validation history, and best checkpoint restore.
-- [ ] Implement P10-P90 coverage and interval-breach anomaly output.
-- [ ] Run focused tests.
-- [ ] Commit with `feat(ml): train and evaluate calibrated demand forecasts`.
+- [x] Write early-stopping tests for improvement, patience exhaustion, and best-state restoration.
+- [x] Write checkpoint reload and dataset-fingerprint rejection tests with prediction equality within `1e-6`.
+- [x] Write hand-calculated coverage, interval-width, and anomaly-severity tests.
+- [x] Run focused tests and observe missing API failures.
+- [x] Implement AdamW-compatible train loop, clipping at 1.0, scheduler state, best checkpoint restore, and full RNG state.
+- [x] Implement P10-P90 coverage and interval-breach anomaly output.
+- [x] Run six focused tests including real optimizer updates and evaluation batches.
+- [x] Commit with `feat(ml): train and evaluate calibrated demand forecasts`.
 
 ### Task 8: Launch real two-worker DDP through Spark TorchDistributor
 
