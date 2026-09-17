@@ -7,6 +7,7 @@ from dataclasses import dataclass
 import torch
 from torch import nn
 from torch.nn import functional as F
+from torch.utils.checkpoint import checkpoint
 
 
 @dataclass(frozen=True)
@@ -17,6 +18,8 @@ class GTQNConfig:
     hidden_size: int = 32
     zone_embedding_size: int = 16
     temporal_dilations: tuple[int, ...] = (1, 2, 4, 8, 16, 32)
+    temporal_zone_chunk_size: int = 32
+    activation_checkpointing: bool = True
     dropout: float = 0.2
     use_fixed_graph: bool = True
     use_adaptive_graph: bool = True
@@ -76,6 +79,22 @@ class GTQNLite(nn.Module):
             raise ValueError(f"expected {self.config.num_zones} zones, received {zones}")
         if calendar.shape[:2] != (batch, steps):
             raise ValueError("calendar must have shape [batch, history, features]")
+        chunk_size = int(self.config.temporal_zone_chunk_size)
+        if chunk_size <= 0:
+            raise ValueError("temporal_zone_chunk_size must be positive")
+        encoded_chunks: list[torch.Tensor] = []
+        for start in range(0, zones, chunk_size):
+            history_chunk = history[:, start : start + chunk_size]
+            if self.training and self.config.activation_checkpointing:
+                encoded_chunks.append(
+                    checkpoint(self._temporal_encode_chunk, history_chunk, calendar, use_reentrant=False)
+                )
+            else:
+                encoded_chunks.append(self._temporal_encode_chunk(history_chunk, calendar))
+        return torch.cat(encoded_chunks, dim=1)
+
+    def _temporal_encode_chunk(self, history: torch.Tensor, calendar: torch.Tensor) -> torch.Tensor:
+        batch, zones, steps, _ = history.shape
         calendar_by_zone = calendar.unsqueeze(1).expand(-1, zones, -1, -1)
         features = torch.cat([history, calendar_by_zone], dim=-1)
         encoded = features.reshape(batch * zones, steps, -1).transpose(1, 2)

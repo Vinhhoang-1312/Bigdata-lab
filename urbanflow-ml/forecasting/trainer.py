@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import random
+from contextlib import nullcontext
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Iterable
@@ -33,14 +34,16 @@ class EarlyStopper:
         self.patience = int(patience)
         self.min_delta = float(min_delta)
         self.best_metric = float("inf")
+        self.best_step: int | None = None
         self.bad_epochs = 0
         self.best_state: dict[str, torch.Tensor] | None = None
 
-    def update(self, metric: float, model: torch.nn.Module) -> bool:
+    def update(self, metric: float, model: torch.nn.Module, *, step: int | None = None) -> bool:
         if not np.isfinite(metric):
             raise ValueError("early-stopping metric must be finite")
         if metric < self.best_metric - self.min_delta:
             self.best_metric = float(metric)
+            self.best_step = None if step is None else int(step)
             self.bad_epochs = 0
             self.best_state = {
                 name: value.detach().cpu().clone()
@@ -60,6 +63,7 @@ class EarlyStopper:
             "patience": self.patience,
             "min_delta": self.min_delta,
             "best_metric": self.best_metric,
+            "best_step": self.best_step,
             "bad_epochs": self.bad_epochs,
             "best_state": self.best_state,
         }
@@ -69,6 +73,7 @@ class EarlyStopper:
             raise ValueError("checkpoint early-stopping patience differs from configuration")
         self.min_delta = float(state["min_delta"])
         self.best_metric = float(state["best_metric"])
+        self.best_step = state.get("best_step")
         self.bad_epochs = int(state["bad_epochs"])
         self.best_state = state["best_state"]
 
@@ -135,23 +140,36 @@ def train_epoch(
     optimizer: torch.optim.Optimizer,
     *,
     gradient_clip_norm: float,
+    gradient_accumulation_steps: int = 1,
     device: torch.device,
 ) -> tuple[float, int]:
+    if gradient_accumulation_steps <= 0:
+        raise ValueError("gradient_accumulation_steps must be positive")
+    loader_batches = len(loader)  # type: ignore[arg-type]
     model.train()
     total_loss = 0.0
     batches = 0
-    for history, calendar, target, _ in loader:
+    optimizer.zero_grad(set_to_none=True)
+    for batch_index, (history, calendar, target, _) in enumerate(loader, start=1):
         history = history.to(device)
         calendar = calendar.to(device)
         target = target.to(device)
-        optimizer.zero_grad(set_to_none=True)
-        predictions = model(history, calendar, fixed_adjacency)
-        loss = pinball_loss(predictions, target)
-        if not torch.isfinite(loss):
-            raise FloatingPointError("non-finite training loss")
-        loss.backward()
-        torch.nn.utils.clip_grad_norm_(model.parameters(), gradient_clip_norm)
-        optimizer.step()
+        should_step = batch_index % gradient_accumulation_steps == 0 or batch_index == loader_batches
+        group_start = ((batch_index - 1) // gradient_accumulation_steps) * gradient_accumulation_steps
+        group_size = min(gradient_accumulation_steps, loader_batches - group_start)
+        sync_context = nullcontext()
+        if not should_step and hasattr(model, "no_sync"):
+            sync_context = model.no_sync()
+        with sync_context:
+            predictions = model(history, calendar, fixed_adjacency)
+            loss = pinball_loss(predictions, target)
+            if not torch.isfinite(loss):
+                raise FloatingPointError("non-finite training loss")
+            (loss / group_size).backward()
+        if should_step:
+            torch.nn.utils.clip_grad_norm_(model.parameters(), gradient_clip_norm)
+            optimizer.step()
+            optimizer.zero_grad(set_to_none=True)
         total_loss += float(loss.detach())
         batches += 1
     if batches == 0:

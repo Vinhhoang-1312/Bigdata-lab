@@ -59,6 +59,34 @@ class GTQNLiteTest(unittest.TestCase):
             self.assertIsNotNone(parameter.grad, name)
             self.assertTrue(torch.isfinite(parameter.grad).all().item(), name)
 
+    def test_temporal_zone_chunks_preserve_predictions_and_gradients(self):
+        baseline = self.build_model()
+        chunked = GTQNLite(
+            GTQNConfig(
+                num_zones=4,
+                history_channels=2,
+                calendar_channels=3,
+                hidden_size=8,
+                zone_embedding_size=4,
+                temporal_dilations=(1, 2),
+                temporal_zone_chunk_size=2,
+                dropout=0.0,
+            )
+        )
+        chunked.load_state_dict(baseline.state_dict())
+        history = torch.randn(2, 4, 16, 2)
+        calendar = torch.randn(2, 16, 3)
+        adjacency = torch.eye(4)
+
+        torch.testing.assert_close(
+            chunked(history, calendar, adjacency),
+            baseline(history, calendar, adjacency),
+            rtol=0.0,
+            atol=1e-6,
+        )
+        pinball_loss(chunked(history, calendar, adjacency), torch.rand(2, 4)).backward()
+        self.assertIsNotNone(chunked.input_projection.weight.grad)
+
     def test_pinball_loss_matches_hand_calculated_under_and_over_prediction(self):
         quantiles = (0.1, 0.5, 0.9)
         under = pinball_loss(torch.zeros(1, 1, 3), torch.ones(1, 1), quantiles=quantiles)

@@ -7,7 +7,9 @@ name = "urbanflow-ml"
 version = "0.1.0"
 requires-python = ">=3.11"
 dependencies = [
+    "boto3==1.40.46",
     "numpy==2.2.6",
+    "pandas==2.3.3",
     "pyarrow==21.0.0",
     "PyYAML==6.0.3",
     "torch==2.8.0",

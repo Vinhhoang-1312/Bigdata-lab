@@ -4,6 +4,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import Mock
 
 import numpy as np
 import torch
@@ -17,6 +18,42 @@ from forecasting.trainer import EarlyStopper, evaluate_epoch, load_checkpoint, s
 
 
 class TrainerTest(unittest.TestCase):
+    def test_gradient_accumulation_reduces_optimizer_steps(self):
+        model = GTQNLite(
+            GTQNConfig(
+                num_zones=2,
+                history_channels=2,
+                calendar_channels=1,
+                hidden_size=4,
+                zone_embedding_size=2,
+                temporal_dilations=(1,),
+                dropout=0.0,
+            )
+        )
+        dataset = torch.utils.data.TensorDataset(
+            torch.randn(4, 2, 6, 2),
+            torch.randn(4, 6, 1),
+            torch.rand(4, 2),
+            torch.arange(4),
+        )
+        loader = torch.utils.data.DataLoader(dataset, batch_size=1)
+        optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
+        original_step = optimizer.step
+        optimizer.step = Mock(side_effect=original_step)
+
+        _, batches = train_epoch(
+            model,
+            loader,
+            torch.eye(2),
+            optimizer,
+            gradient_clip_norm=1.0,
+            gradient_accumulation_steps=2,
+            device=torch.device("cpu"),
+        )
+
+        self.assertEqual(batches, 4)
+        self.assertEqual(optimizer.step.call_count, 2)
+
     def test_train_and_evaluate_epoch_use_real_model_batches(self):
         torch.manual_seed(5)
         model = GTQNLite(

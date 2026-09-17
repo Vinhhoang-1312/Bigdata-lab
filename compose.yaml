@@ -8,7 +8,12 @@ x-spark-common: &spark-common
   build: *spark-build
   restart: unless-stopped
   environment:
-    PYTHONPATH: /workspace/urbanflow-streaming
+    AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:?Copy .env.example to .env}
+    AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:?Copy .env.example to .env}
+    AWS_REGION: us-east-1
+    PYTHONPATH: /workspace/urbanflow-ml:/workspace/urbanflow-streaming
+  volumes:
+    - ./:/workspace:ro
   networks:
     - urbanflow
 
@@ -179,7 +184,7 @@ services:
     ports:
       - "8081:8081"
     mem_limit: 2g
-    cpus: 1.5
+    cpus: 2.0
 
   spark-worker-2:
     <<: *spark-common
@@ -200,7 +205,7 @@ services:
     ports:
       - "8082:8082"
     mem_limit: 2g
-    cpus: 1.5
+    cpus: 2.0
 
   spark-submit:
     image: *spark-image
@@ -211,7 +216,7 @@ services:
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:?Copy .env.example to .env}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:?Copy .env.example to .env}
       AWS_REGION: us-east-1
-      PYTHONPATH: /workspace/urbanflow-streaming
+      PYTHONPATH: /workspace/urbanflow-ml:/workspace/urbanflow-streaming
     volumes:
       - ./:/workspace
       - spark-ivy:/root/.ivy2
@@ -225,6 +230,10 @@ services:
       - org.apache.spark:spark-sql-kafka-0-10_2.13:4.2.0,org.apache.hadoop:hadoop-aws:3.5.0
       - --conf
       - spark.sql.session.timeZone=America/New_York
+      - --conf
+      - spark.network.timeout=600s
+      - --conf
+      - spark.executor.heartbeatInterval=30s
       - --conf
       - spark.hadoop.fs.s3a.impl=org.apache.hadoop.fs.s3a.S3AFileSystem
       - --conf

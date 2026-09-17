@@ -23,14 +23,21 @@ tensor:
   lookback_buckets: 336
 
 model:
-  hidden_size: 32
+  hidden_size: 16
   zone_embedding_size: 16
+  temporal_dilations: [1, 2, 4, 8]
+  temporal_zone_chunk_size: 32
+  activation_checkpointing: true
   dropout: 0.2
   quantiles: [0.1, 0.5, 0.9]
 
 training:
   seed: 20260917
-  batch_size_per_rank: 4
+  batch_size_per_rank: 1
+  gradient_accumulation_steps: 4
+  train_target_stride: 4
+  validation_target_stride: 4
+  evaluation_batch_size_per_rank: 4
   learning_rate: 0.001
   weight_decay: 0.0001
   gradient_clip_norm: 1.0

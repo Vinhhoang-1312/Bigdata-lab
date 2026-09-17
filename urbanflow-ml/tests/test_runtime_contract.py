@@ -6,7 +6,9 @@ import unittest
 
 class RuntimeContractTest(unittest.TestCase):
     def test_pytorch_and_torch_distributor_are_available(self):
+        import boto3
         import numpy as np
+        import pandas as pd
         import pyarrow
         import torch
         from pyspark.ml.torch.distributor import TorchDistributor
@@ -25,8 +27,10 @@ class RuntimeContractTest(unittest.TestCase):
             json.dumps(
                 {
                     "numpy": np.__version__,
+                    "pandas": pd.__version__,
                     "pyarrow": pyarrow.__version__,
                     "pytorch": torch.__version__,
+                    "boto3": boto3.__version__,
                 },
                 sort_keys=True,
             )

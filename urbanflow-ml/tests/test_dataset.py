@@ -69,6 +69,12 @@ class ZoneDemandDatasetTest(unittest.TestCase):
         self.assertEqual(validation.target_indices, [5, 6])
         self.assertEqual(test.target_indices, [7])
 
+    def test_target_stride_subsamples_only_within_the_same_split(self):
+        metadata = {"split_indices": {"train": [2, 8], "validation": [5, 7], "test": [7, 8]}}
+        dataset = ZoneDemandDataset(fixture_arrays(), metadata, "train", lookback=2, target_stride=2)
+
+        self.assertEqual(dataset.target_indices, [2, 4, 6])
+
     def test_two_rank_sampler_is_disjoint_deterministic_and_balanced(self):
         dataset = ZoneDemandDataset(fixture_arrays(), METADATA, "train", lookback=2)
         rank_zero = RankPartitionSampler(dataset, rank=0, world_size=2, seed=17, shuffle=True)

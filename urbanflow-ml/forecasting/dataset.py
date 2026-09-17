@@ -17,9 +17,12 @@ class ZoneDemandDataset(Dataset):
         split: str,
         *,
         lookback: int = 336,
+        target_stride: int = 1,
     ) -> None:
         if lookback <= 0:
             raise ValueError("lookback must be positive")
+        if target_stride <= 0:
+            raise ValueError("target_stride must be positive")
         split_indices = metadata["split_indices"]
         if split not in split_indices:
             raise ValueError(f"unknown split: {split}")
@@ -34,7 +37,7 @@ class ZoneDemandDataset(Dataset):
         self.center = np.asarray(arrays["scaler_center"], dtype=np.float32)
         self.scale = np.asarray(arrays["scaler_scale"], dtype=np.float32)
         self.lookback = lookback
-        self.target_indices = list(range(left, right))
+        self.target_indices = list(range(left, right, target_stride))
 
         if self.counts.shape != self.observed.shape:
             raise ValueError("counts and observed must have the same shape")
