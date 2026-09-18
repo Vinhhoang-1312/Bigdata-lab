@@ -12,6 +12,7 @@ x-spark-common: &spark-common
     AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:?Copy .env.example to .env}
     AWS_REGION: us-east-1
     PYTHONPATH: /workspace/urbanflow-ml:/workspace/urbanflow-streaming
+    SPARK_MASTER_OPTS: -Dspark.worker.timeout=600
   volumes:
     - ./:/workspace:ro
   networks:
