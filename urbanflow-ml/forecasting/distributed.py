@@ -29,6 +29,12 @@ def is_training_complete(result: dict, *, target_max_epochs: int) -> bool:
     return bool(result.get("stopped_early")) or int(result.get("last_epoch", 0)) >= target_max_epochs
 
 
+def ddp_find_unused_parameters(variant: str) -> bool:
+    if variant not in {"no_graph", "fixed_graph", "full"}:
+        raise ValueError(f"unknown model variant: {variant}")
+    return variant != "full"
+
+
 def download_s3a_uri(uri: str, local_path: str | Path) -> None:
     import boto3
     from botocore.config import Config
@@ -276,7 +282,7 @@ def distributed_train(
             variant=variant,
         )
         model = GTQNLite(model_config)
-        ddp_model = DistributedDataParallel(model)
+        ddp_model = DistributedDataParallel(model, find_unused_parameters=ddp_find_unused_parameters(variant))
         optimizer = torch.optim.AdamW(
             ddp_model.parameters(),
             lr=float(training["learning_rate"]),

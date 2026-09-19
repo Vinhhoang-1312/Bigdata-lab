@@ -17,6 +17,7 @@ if str(ML_ROOT) not in sys.path:
 
 from forecasting.distributed import (
     checkpoint_key,
+    ddp_find_unused_parameters,
     destroy_distributed,
     gather_rank_evidence,
     initialize_distributed,
@@ -60,6 +61,11 @@ def _contract_worker(rank: int, world_size: int, port: int, output_path: str) ->
 
 
 class DistributedContractTest(unittest.TestCase):
+    def test_conditional_graph_variants_enable_unused_parameter_detection(self):
+        self.assertFalse(ddp_find_unused_parameters("full"))
+        self.assertTrue(ddp_find_unused_parameters("fixed_graph"))
+        self.assertTrue(ddp_find_unused_parameters("no_graph"))
+
     def test_only_final_or_early_stopped_result_is_resume_complete(self):
         self.assertFalse(is_training_complete({"last_epoch": 2, "stopped_early": False}, target_max_epochs=60))
         self.assertTrue(is_training_complete({"last_epoch": 60, "stopped_early": False}, target_max_epochs=60))
