@@ -144,6 +144,20 @@ Day la regression, nen **khong dung classification accuracy**.
 Ket luan cuoi can test metrics, interval coverage, phan tich theo zone/borough,
 va so sanh seasonal-naive va Spark MLlib GBT baseline.
 
+## Held-out evidence artifact
+
+After a GTQN variant finishes, run the chronological February test evaluation:
+
+```powershell
+docker compose run --rm spark-submit --master spark://spark-master:7077 /workspace/urbanflow-ml/spark/evaluate_gtqn_test.py --config /workspace/urbanflow-ml/config/settings.quality.yaml --run-id <run-id> --variant full
+```
+
+The evaluator writes
+`s3a://urbanflow/dev/ml/runs/<run-id>/training/<variant>/test_metrics.json`.
+It is a PASS-only evidence envelope: it records the run, variant, artifact
+fingerprint, configuration hash, evaluation time, and metrics. A failed or
+unfinished evaluation cannot become ML UI evidence.
+
 ## Quan sat run
 
 Theo doi log real-time cua `fixed_graph`:
