@@ -190,7 +190,7 @@ def show_table(frame: pd.DataFrame) -> None:
             "is_high_demand": "High demand",
         }
     )
-    st.dataframe(pretty, width="stretch", hide_index=True)
+    st.dataframe(pretty, width=1200, hide_index=True)
 
 
 st.set_page_config(page_title="UrbanFlow Live", layout="wide")
@@ -261,12 +261,12 @@ def live_body() -> None:
     )
     with overview:
         st.subheader("New York taxi-zone demand")
-        st.pydeck_chart(nyc_map(latest), width="stretch", height=520)
+        st.pydeck_chart(nyc_map(latest), width=1200, height=520)
         st.caption(
             "TLC taxi-zone polygons. Red = high demand (ratio > 1.5), gold ≈ history, "
             "teal = below history, grey = no live Gold row."
         )
-        st.altair_chart(current_activity_chart(latest), width="stretch")
+        st.altair_chart(current_activity_chart(latest), width=1200)
         show_table(latest)
     with comparison:
         st.subheader("Current trips vs historical mean")
@@ -274,9 +274,9 @@ def live_body() -> None:
             st.info("No rows in the current filters.")
         elif chart_mode_for(filtered) == "grouped":
             st.caption("One time window in this slice, so this is a grouped bar — not a trend line.")
-            st.altair_chart(grouped_comparison_chart(latest), width="stretch")
+            st.altair_chart(grouped_comparison_chart(latest), width=1200)
         else:
-            st.altair_chart(line_comparison_chart(filtered, "zone_label"), width="stretch")
+            st.altair_chart(line_comparison_chart(filtered, "zone_label"), width=1200)
         show_table(filtered)
     with explorer:
         zone = st.selectbox("Zone", selected_labels or [f"{z} — {id_to_name[z]}" for z in zone_ids])
@@ -291,9 +291,9 @@ def live_body() -> None:
             m3.metric("Demand ratio", float(row.demand_ratio) if pd.notna(row.demand_ratio) else "—")
             if chart_mode_for(zone_rows) == "grouped":
                 st.caption("Only one window — bars compare this zone to history. A line needs two or more windows.")
-                st.altair_chart(grouped_comparison_chart(zone_rows), width="stretch")
+                st.altair_chart(grouped_comparison_chart(zone_rows), width=1200)
             else:
-                st.altair_chart(line_comparison_chart(zone_rows, "zone_label"), width="stretch")
+                st.altair_chart(line_comparison_chart(zone_rows, "zone_label"), width=1200)
             show_table(zone_rows)
     with unusual:
         ranked = latest.sort_values("demand_ratio", ascending=False, na_position="last")
@@ -305,7 +305,7 @@ def live_body() -> None:
         if plot.empty:
             st.info("No demand-ratio values to rank.")
         else:
-            st.altair_chart(demand_chart(plot), width="stretch")
+            st.altair_chart(demand_chart(plot), width=1200)
         show_table(ranked)
 
 
@@ -315,4 +315,4 @@ with st.expander("Historical baseline"):
     hist = historical[historical.pickup_zone_id.isin(selected_ids)] if selected_ids else historical
     named = lookup.loc[:, ["pickup_zone_id", "zone_name"]]
     hist = hist.merge(named, on="pickup_zone_id", how="left")
-    st.dataframe(hist, width="stretch", hide_index=True)
+    st.dataframe(hist, width=1200, hide_index=True)
