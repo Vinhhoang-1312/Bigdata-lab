@@ -12,4 +12,7 @@ RUN python3 -m pip install --no-cache-dir \
     --index-url https://download.pytorch.org/whl/cpu \
     torch==2.8.0
 
-RUN python3 -m pip install --no-cache-dir boto3==1.40.46
+RUN python3 -m pip install --no-cache-dir \
+    boto3==1.40.46 \
+    fastapi==0.116.1 \
+    uvicorn==0.35.0
