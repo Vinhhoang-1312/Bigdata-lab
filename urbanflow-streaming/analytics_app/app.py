@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import os
-from datetime import timedelta
 from pathlib import Path
 
 import altair as alt
@@ -18,6 +17,7 @@ try:
         prepare_live_view,
     )
     from .zones import attach_demand_to_geojson, load_taxi_zone_geojson, load_zone_lookup
+    from .session_cache import load_once_per_session
 except ImportError:
     from data_access import (
         HIGH_DEMAND_RATIO,
@@ -26,6 +26,7 @@ except ImportError:
         prepare_live_view,
     )
     from zones import attach_demand_to_geojson, load_taxi_zone_geojson, load_zone_lookup
+    from session_cache import load_once_per_session
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_HISTORICAL = ROOT / "urbanflow-foundation/fixtures/gold/historical_zone_baseline.jsonl"
@@ -204,8 +205,11 @@ historical_path, live_path, lookup_path = _paths()
 reader = GoldReader(historical_path, live_path)
 
 try:
-    live, historical = reader.live(), reader.historical()
-    lookup = load_zone_lookup(lookup_path)
+    live, historical, lookup = load_once_per_session(
+        st.session_state,
+        (historical_path, live_path, lookup_path),
+        lambda: (reader.live(), reader.historical(), load_zone_lookup(lookup_path)),
+    )
 except Exception as exc:
     st.error(f"Unable to read Gold data: {exc}")
     st.stop()
@@ -247,7 +251,6 @@ high = int(latest["is_high_demand"].sum()) if not latest.empty else 0
 latest_label = latest.window_label.iloc[0] if not latest.empty else "—"
 
 
-@st.fragment(run_every=timedelta(seconds=5))
 def live_body() -> None:
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Data mode", "Fixture Gold" if live_path.endswith(".jsonl") else "Integrated Gold")
