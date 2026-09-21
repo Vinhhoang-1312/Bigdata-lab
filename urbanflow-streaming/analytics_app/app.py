@@ -32,6 +32,7 @@ ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_HISTORICAL = ROOT / "urbanflow-foundation/fixtures/gold/historical_zone_baseline.jsonl"
 DEFAULT_LIVE = ROOT / "urbanflow-foundation/fixtures/gold/expected_live_zone_metrics.jsonl"
 DEFAULT_LOOKUP = ROOT / "urbanflow-foundation/fixtures/bronze/zone_lookup.csv"
+INTEGRATED_LOOKUP = "s3a://urbanflow/bronze/zone_lookup/taxi_zone_lookup.csv"
 TABLE_COLS = [
     "zone_label",
     "window_label",
@@ -53,7 +54,8 @@ def _paths() -> tuple[str, str, str]:
             "Live Gold",
             os.getenv("URBANFLOW_LIVE_PATH", str(DEFAULT_LIVE)),
         )
-        lookup = st.text_input("Zone lookup", str(DEFAULT_LOOKUP))
+        default_lookup = INTEGRATED_LOOKUP if live.startswith(("s3://", "s3a://")) else str(DEFAULT_LOOKUP)
+        lookup = st.text_input("Zone lookup", os.getenv("URBANFLOW_ZONE_LOOKUP_PATH", default_lookup))
     return historical, live, lookup
 
 
@@ -195,6 +197,27 @@ def show_table(frame: pd.DataFrame) -> None:
 
 
 st.set_page_config(page_title="UrbanFlow Live", layout="wide")
+st.markdown(
+    """
+    <style>
+    @media (max-width: 640px) {
+      div[data-testid="stTabs"] div[role="tablist"] {
+        flex-wrap: nowrap;
+        gap: 0;
+      }
+      div[data-testid="stTabs"] button[role="tab"] {
+        flex: 1 1 0;
+        min-width: 0;
+        padding: 0.35rem 0.15rem;
+        line-height: 1.15;
+        text-align: center;
+        white-space: normal;
+      }
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 st.title("UrbanFlow — Live mobility analytics")
 st.caption(
     "Five-minute pickup demand vs the historical Gold baseline · clocks are America/New_York · "

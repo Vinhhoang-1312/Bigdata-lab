@@ -8,6 +8,11 @@ from pathlib import Path
 
 import pandas as pd
 
+try:
+    from .storage import readable_path, storage_options
+except ImportError:
+    from storage import readable_path, storage_options
+
 HIGH_DEMAND_RATIO = 1.5
 GEOJSON_PATH = Path(__file__).resolve().parent / "data" / "taxi_zones.geojson"
 
@@ -25,7 +30,8 @@ ZONE_CENTROIDS: dict[int, tuple[float, float]] = {
 
 
 def load_zone_lookup(path: str | Path) -> pd.DataFrame:
-    frame = pd.read_csv(path)
+    source = str(path)
+    frame = pd.read_csv(readable_path(source), **storage_options(source))
     required = {"LocationID", "Zone"}
     missing = required - set(frame.columns)
     if missing:

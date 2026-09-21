@@ -12,6 +12,20 @@ NOW = datetime(2025, 1, 6, 13, 10, tzinfo=timezone.utc)
 
 
 class StreamingServiceTest(unittest.TestCase):
+    def test_gold_read_failure_is_exposed_as_service_unavailable(self):
+        """Storage outages must not leak as unhandled HTTP 500 responses."""
+        from fastapi import HTTPException
+        from serving.app import read_gold_or_503
+
+        def unavailable() -> dict:
+            raise PermissionError("Forbidden")
+
+        with self.assertRaises(HTTPException) as caught:
+            read_gold_or_503(unavailable)
+
+        self.assertEqual(503, caught.exception.status_code)
+        self.assertEqual("Gold data is temporarily unavailable", caught.exception.detail)
+
     def test_missing_telemetry_is_unavailable_not_zero(self):
         """Removing telemetry must not make the Reliability view look healthy."""
         from analytics_app.data_access import GoldReader

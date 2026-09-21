@@ -61,6 +61,37 @@ def test_s3a_paths_are_read_with_seaweedfs_storage_options(monkeypatch):
     ]
 
 
+def test_s3a_zone_lookup_uses_seaweedfs_storage_options(monkeypatch):
+    import pandas as pd
+    from analytics_app import zones
+
+    calls = []
+
+    def fake_read_csv(path, **kwargs):
+        calls.append((path, kwargs))
+        return pd.DataFrame({"LocationID": [4], "Zone": ["Alphabet City"]})
+
+    monkeypatch.setenv("URBANFLOW_S3_ENDPOINT", "http://seaweedfs:8333")
+    monkeypatch.setattr(zones.pd, "read_csv", fake_read_csv)
+
+    lookup = zones.load_zone_lookup("s3a://urbanflow/bronze/zone_lookup/taxi_zone_lookup.csv")
+
+    assert lookup.to_dict("records") == [{"pickup_zone_id": 4, "zone_name": "Alphabet City"}]
+    assert calls == [
+        (
+            "s3://urbanflow/bronze/zone_lookup/taxi_zone_lookup.csv",
+            {
+                "storage_options": {
+                    "client_kwargs": {"endpoint_url": "http://seaweedfs:8333"},
+                    "key": "minioadmin",
+                    "secret": "minioadmin",
+                    "use_ssl": False,
+                }
+            },
+        )
+    ]
+
+
 def test_prepare_live_view_uses_new_york_time_and_zone_names(foundation):
     from analytics_app.data_access import GoldReader, prepare_live_view
     from analytics_app.zones import load_zone_lookup

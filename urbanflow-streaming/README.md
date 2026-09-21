@@ -141,9 +141,38 @@ export URBANFLOW_LIVE_PATH=s3://urbanflow/gold/live_zone_metrics/
 streamlit run analytics_app/app.py
 ```
 
-Configure `s3fs` for the SeaweedFS endpoint when reading integrated storage.
+For SeaweedFS, configure the S3-compatible endpoint. The integrated profile
+automatically uses the complete taxi-zone lookup in Bronze; use
+`URBANFLOW_ZONE_LOOKUP_PATH` only to override it.
+
+```bash
+export URBANFLOW_S3_ENDPOINT=http://seaweedfs:8333
+streamlit run analytics_app/app.py
+```
+
 The app includes overview KPIs, current-versus-historical charts, zone/date
 filters, a zone explorer, unusual-zone ranking, and Live/Historical tables.
+It does not auto-refresh the page: a browser refresh is the explicit action
+that reads a new Gold snapshot.
+
+## Read-only Streaming API
+
+`serving/app.py` exposes a small FastAPI read model over Gold. It is for
+programmatic status and overview reads; it does not run Spark transformations.
+From a container on the UrbanFlow Compose network, configure all S3A paths and
+the SeaweedFS endpoint explicitly:
+
+```bash
+export URBANFLOW_HISTORICAL_PATH=s3a://urbanflow/gold/historical_zone_baseline/
+export URBANFLOW_LIVE_PATH=s3a://urbanflow/gold/live_zone_metrics/task6/stream_health_20260920_001/
+export URBANFLOW_ZONE_LOOKUP_PATH=s3a://urbanflow/bronze/zone_lookup/taxi_zone_lookup.csv
+export URBANFLOW_S3_ENDPOINT=http://seaweedfs:8333
+uvicorn serving.app:app --host 0.0.0.0 --port 8001
+```
+
+The API returns `503` when Gold is unavailable or its storage configuration is
+invalid. This keeps an infrastructure problem distinct from a successful but
+empty analytics result.
 
 ## Streaming and backlog measurements
 
