@@ -50,10 +50,23 @@ def ratio_fill_color(ratio: float | None) -> list[int]:
     return [42, 157, 143, 180]
 
 
+def _round_coords(coords: Any, precision: int = 4) -> Any:
+    if isinstance(coords, (int, float)):
+        return round(float(coords), precision)
+    if isinstance(coords, list):
+        return [_round_coords(c, precision) for c in coords]
+    return coords
+
+
 @lru_cache(maxsize=1)
 def load_taxi_zone_geojson(path: str | None = None) -> dict:
     geo_path = Path(path) if path else GEOJSON_PATH
-    return json.loads(geo_path.read_text(encoding="utf-8"))
+    data = json.loads(geo_path.read_text(encoding="utf-8"))
+    for feat in data.get("features", []):
+        geom = feat.get("geometry")
+        if geom and "coordinates" in geom:
+            geom["coordinates"] = _round_coords(geom["coordinates"], 4)
+    return data
 
 
 def attach_demand_to_geojson(geojson: dict, live_view: pd.DataFrame) -> dict:

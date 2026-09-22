@@ -181,19 +181,34 @@ def nyc_map(frame: pd.DataFrame) -> pdk.Deck:
     )
 
 
-def show_table(frame: pd.DataFrame) -> None:
-    pretty = frame.loc[:, [c for c in TABLE_COLS if c in frame.columns]].rename(
-        columns={
-            "zone_label": "Zone",
-            "window_label": "Window (NY)",
-            "current_trip_count": "Current trips",
-            "historical_mean_trip_count": "Historical mean",
-            "demand_ratio": "Demand ratio",
-            "z_score": "Z-score",
-            "is_high_demand": "High demand",
-        }
-    )
-    st.dataframe(pretty, width=1200, hide_index=True)
+def get_cached_nyc_map(latest: pd.DataFrame, selected_ids: tuple[int, ...]) -> pdk.Deck:
+    ts = str(latest["window_start_local"].max()) if not latest.empty else "empty"
+    cache_key = f"map_{ts}_{hash(selected_ids)}"
+    if st.session_state.get("cached_map_key") != cache_key or "cached_map_deck" not in st.session_state:
+        st.session_state["cached_map_deck"] = nyc_map(latest)
+        st.session_state["cached_map_key"] = cache_key
+    return st.session_state["cached_map_deck"]
+
+
+def show_table(frame: pd.DataFrame, label: str = "Detailed data table") -> None:
+    count = len(frame)
+    with st.expander(f"📋 {label} ({count:,} rows)", expanded=False):
+        pretty = frame.loc[:, [c for c in TABLE_COLS if c in frame.columns]].rename(
+            columns={
+                "zone_label": "Zone",
+                "window_label": "Window (NY)",
+                "current_trip_count": "Current trips",
+                "historical_mean_trip_count": "Historical mean",
+                "demand_ratio": "Demand ratio",
+                "z_score": "Z-score",
+                "is_high_demand": "High demand",
+            }
+        )
+        if count > 500:
+            st.caption(f"Showing first 500 of {count:,} rows to keep rendering fast.")
+            st.dataframe(pretty.head(500), width=1200, hide_index=True)
+        else:
+            st.dataframe(pretty, width=1200, hide_index=True)
 
 
 st.set_page_config(page_title="UrbanFlow Live", layout="wide")
@@ -304,19 +319,26 @@ def live_dashboard() -> None:
     c3.metric("Current trips", int(latest.current_trip_count.sum()) if not latest.empty else 0)
     c4.metric("High-demand zones", high, help=f"demand_ratio > {HIGH_DEMAND_RATIO}")
 
-    overview, comparison, explorer, unusual = st.tabs(
-        ["Overview", "Current vs historical", "Zone explorer", "Unusual zones"]
+    tab_options = ["Overview", "Current vs historical", "Zone explorer", "Unusual zones"]
+    active_tab = (
+        st.segmented_control("Navigation", tab_options, default="Overview", label_visibility="collapsed")
+        if hasattr(st, "segmented_control")
+        else st.radio("Navigation", tab_options, horizontal=True, label_visibility="collapsed")
     )
-    with overview:
+    if not active_tab:
+        active_tab = "Overview"
+
+    if active_tab == "Overview":
         st.subheader("New York taxi-zone demand")
-        st.pydeck_chart(nyc_map(latest), width=1200, height=520)
+        deck = get_cached_nyc_map(latest, tuple(selected_ids))
+        st.pydeck_chart(deck, width=1200, height=520)
         st.caption(
             "TLC taxi-zone polygons. Red = high demand (ratio > 1.5), gold ≈ history, "
             "teal = below history, grey = no live Gold row."
         )
         st.altair_chart(current_activity_chart(latest), width=1200)
-        show_table(latest)
-    with comparison:
+        show_table(latest, "Overview zones")
+    elif active_tab == "Current vs historical":
         st.subheader("Current trips vs historical mean")
         if filtered.empty:
             st.info("No rows in the current filters.")
@@ -325,8 +347,8 @@ def live_dashboard() -> None:
             st.altair_chart(grouped_comparison_chart(latest), width=1200)
         else:
             st.altair_chart(line_comparison_chart(filtered, "zone_label"), width=1200)
-        show_table(filtered)
-    with explorer:
+        show_table(filtered, "Comparison slice")
+    elif active_tab == "Zone explorer":
         zone = st.selectbox("Zone", selected_labels or [f"{z} — {id_to_name[z]}" for z in zone_ids], key="explorer_zone_select")
         zone_rows = filtered[filtered.zone_label == zone]
         if zone_rows.empty:
@@ -342,8 +364,8 @@ def live_dashboard() -> None:
                 st.altair_chart(grouped_comparison_chart(zone_rows), width=1200)
             else:
                 st.altair_chart(line_comparison_chart(zone_rows, "zone_label"), width=1200)
-            show_table(zone_rows)
-    with unusual:
+            show_table(zone_rows, f"Rows for {zone}")
+    elif active_tab == "Unusual zones":
         ranked = latest.sort_values("demand_ratio", ascending=False, na_position="last")
         st.caption(
             f"High demand is demand_ratio > {HIGH_DEMAND_RATIO}. "
@@ -354,12 +376,12 @@ def live_dashboard() -> None:
             st.info("No demand-ratio values to rank.")
         else:
             st.altair_chart(demand_chart(plot), width=1200)
-        show_table(ranked)
+        show_table(ranked, "Ranked unusual zones")
 
 
 live_dashboard()
 
-with st.expander("Historical baseline"):
+with st.expander("Historical baseline", expanded=False):
     hist = historical[historical.pickup_zone_id.isin(selected_ids)] if selected_ids else historical
     named = lookup.loc[:, ["pickup_zone_id", "zone_name"]]
     hist = hist.merge(named, on="pickup_zone_id", how="left")
