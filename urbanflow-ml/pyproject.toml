@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "urbanflow-ml"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "boto3==1.40.46",
+    "numpy==2.2.6",
+    "pandas==2.3.3",
+    "pyarrow==21.0.0",
+    "PyYAML==6.0.3",
+    "torch==2.8.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.setuptools.packages.find]
+include = ["forecasting*"]

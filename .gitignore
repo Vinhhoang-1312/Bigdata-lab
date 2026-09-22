@@ -43,6 +43,8 @@ htmlcov/
 .coverage
 .coverage.*
 .cache
+.pip-cache/
+.tmp/
 nosetests.xml
 coverage.xml
 *.cover
@@ -211,11 +213,25 @@ spark-warehouse/
 metastore_db/
 derby.log
 checkpoints/
+.checkpoints/
+**/.checkpoints/
 local-data/
 urbanflow-batch/output/
 urbanflow-batch/.local/
 urbanflow-replay/output/
 urbanflow-streaming/output/
+urbanflow-ml/output/
+
+# Converted TLC shapefile (runtime map uses taxi_zones.geojson)
+urbanflow-streaming/analytics_app/data/taxi_zones_shp/
+
+# Local machine config — keep *.example.yaml tracked
+**/config/settings.yaml
+!**/config/settings.example.yaml
+
+# Cursor / agent local files (not part of the demo)
+.cursor/
+docs/superpowers/
 
 # Ruff stuff:
 .ruff_cache/
@@ -230,6 +246,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Playwright MCP local artifacts
+.playwright-mcp/
 
 
 

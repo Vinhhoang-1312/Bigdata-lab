@@ -1,0 +1,16 @@
+profile: fixture
+time:
+  analytics_timezone: America/New_York
+streaming:
+  watermark: 10 minutes
+  trigger: 10 seconds
+kafka:
+  bootstrap_servers: localhost:9092
+  topic: urbanflow.trip-events
+storage:
+  historical_baseline: ../urbanflow-foundation/fixtures/gold/historical_zone_baseline.jsonl
+  live_metrics: output/fixture-live-gold
+  streaming_checkpoint: .checkpoints/fixture-live-trip-metrics
+seaweedfs:
+  s3_endpoint: http://localhost:8333
+  path_style_access: true

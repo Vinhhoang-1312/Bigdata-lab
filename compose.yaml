@@ -1,14 +1,20 @@
 name: urbanflow
 
-x-spark-image: &spark-image apache/spark:4.2.0-python3
+x-spark-image: &spark-image urbanflow/spark-ml:4.2.0-python3
+x-spark-build: &spark-build
+  context: ./docker/spark-ml
 x-spark-common: &spark-common
   image: *spark-image
+  build: *spark-build
   restart: unless-stopped
   environment:
     AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:?Copy .env.example to .env}
     AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:?Copy .env.example to .env}
     AWS_REGION: us-east-1
-    PYTHONPATH: /workspace/urbanflow-batch
+    PYTHONPATH: /workspace/urbanflow-batch:/workspace/urbanflow-replay:/workspace/urbanflow-streaming:/workspace/urbanflow-ml
+    SPARK_MASTER_OPTS: -Dspark.worker.timeout=600
+  volumes:
+    - ./:/workspace:ro
   networks:
     - urbanflow
 
@@ -108,7 +114,11 @@ services:
     networks:
       - urbanflow
     healthcheck:
-      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1"]
+      test:
+        [
+          "CMD-SHELL",
+          "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1",
+        ]
       interval: 5s
       timeout: 5s
       retries: 30
@@ -127,7 +137,12 @@ services:
           --create --if-not-exists --topic urbanflow.trip-events \
           --partitions 4 --replication-factor 1
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 \
+          --create --if-not-exists --topic urbanflow.trip-events.smoke-invalid \
+          --partitions 1 --replication-factor 1
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 \
           --describe --topic urbanflow.trip-events
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 \
+          --describe --topic urbanflow.trip-events.smoke-invalid
     networks:
       - urbanflow
     restart: "no"
@@ -187,7 +202,7 @@ services:
     ports:
       - "7077:7077"
       - "8080:8080"
-    mem_limit: 768m
+    mem_limit: 640m
     cpus: 1.0
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8080/json/ >/dev/null"]
@@ -205,9 +220,9 @@ services:
       - /opt/spark/bin/spark-class
       - org.apache.spark.deploy.worker.Worker
       - --cores
-      - "2"
+      - "1"
       - --memory
-      - 768m
+      - 1536m
       - --webui-port
       - "8081"
       - spark://spark-master:7077
@@ -215,7 +230,7 @@ services:
       - "8081:8081"
     volumes:
       - ./:/workspace:ro
-    mem_limit: 1g
+    mem_limit: 2g
     cpus: 2.0
 
   spark-worker-2:
@@ -228,9 +243,9 @@ services:
       - /opt/spark/bin/spark-class
       - org.apache.spark.deploy.worker.Worker
       - --cores
-      - "2"
+      - "1"
       - --memory
-      - 768m
+      - 1536m
       - --webui-port
       - "8082"
       - spark://spark-master:7077
@@ -238,18 +253,19 @@ services:
       - "8082:8082"
     volumes:
       - ./:/workspace:ro
-    mem_limit: 1g
+    mem_limit: 2g
     cpus: 2.0
 
   spark-submit:
     image: *spark-image
+    build: *spark-build
     user: root
     working_dir: /workspace
     environment:
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:?Copy .env.example to .env}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:?Copy .env.example to .env}
       AWS_REGION: us-east-1
-      PYTHONPATH: /workspace/urbanflow-batch
+      PYTHONPATH: /workspace/urbanflow-batch:/workspace/urbanflow-replay:/workspace/urbanflow-streaming:/workspace/urbanflow-ml
     volumes:
       - ./:/workspace
       - spark-ivy:/root/.ivy2
@@ -260,9 +276,13 @@ services:
       - --conf
       - spark.jars.ivy=/root/.ivy2
       - --packages
-      - org.apache.hadoop:hadoop-aws:3.5.0
+      - org.apache.spark:spark-sql-kafka-0-10_2.13:4.2.0,org.apache.hadoop:hadoop-aws:3.5.0
       - --conf
       - spark.sql.session.timeZone=America/New_York
+      - --conf
+      - spark.network.timeout=600s
+      - --conf
+      - spark.executor.heartbeatInterval=30s
       - --conf
       - spark.hadoop.fs.s3a.impl=org.apache.hadoop.fs.s3a.S3AFileSystem
       - --conf

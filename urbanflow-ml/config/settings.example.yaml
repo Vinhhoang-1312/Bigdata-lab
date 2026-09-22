@@ -1,0 +1,47 @@
+foundation_version: "1.0.0"
+profile: integrated
+
+paths:
+  silver: "s3a://urbanflow/silver/trips/"
+  work: "s3a://urbanflow/dev/ml/"
+  reports: "urbanflow-ml/docs/results"
+
+forecast:
+  source_warmup_start: "2022-08-01"
+  train_start: "2022-08-08"
+  train_end: "2022-12-31"
+  validation_start: "2023-01-01"
+  validation_end: "2023-01-31"
+  test_start: "2023-02-01"
+  test_end: "2023-02-28"
+  bucket_minutes: 30
+  horizon_minutes: 30
+  seed: 20260914
+
+tensor:
+  expected_zone_count: 265
+  lookback_buckets: 336
+
+model:
+  hidden_size: 16
+  zone_embedding_size: 16
+  temporal_dilations: [1, 2, 4, 8]
+  temporal_zone_chunk_size: 32
+  activation_checkpointing: true
+  dropout: 0.2
+  quantiles: [0.1, 0.5, 0.9]
+
+training:
+  seed: 20260917
+  batch_size_per_rank: 1
+  gradient_accumulation_steps: 4
+  train_target_stride: 4
+  validation_target_stride: 4
+  evaluation_batch_size_per_rank: 4
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  gradient_clip_norm: 1.0
+  max_epochs: 60
+  early_stopping_patience: 8
+  checkpoint_every_epochs: 1
+  num_processes: 2
