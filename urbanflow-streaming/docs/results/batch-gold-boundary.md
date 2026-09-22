@@ -1,9 +1,9 @@
 # Batch Historical Gold Boundary Result
 
-Date: 2026-09-14T12:19:05Z
+Date: 2026-09-20T13:17:00Z
 Status: `PASS`
 Path: `s3a://urbanflow/gold/historical_zone_baseline/`
-Batch source commit: `749ea2e5420b538d45280f86b48569a576ac1ad9`
+Batch source commit: `unknown`
 
 ## Summary
 

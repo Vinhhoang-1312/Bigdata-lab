@@ -58,24 +58,34 @@ def load_taxi_zone_geojson(path: str | None = None) -> dict:
 
 def attach_demand_to_geojson(geojson: dict, live_view: pd.DataFrame) -> dict:
     """Copy TLC polygons and paint fill_color from Live Gold demand_ratio."""
-    painted = deepcopy(geojson)
-    by_zone: dict[int, pd.Series] = {}
+    by_zone: dict[int, dict] = {}
     if not live_view.empty:
-        for _, row in live_view.iterrows():
-            by_zone[int(row.pickup_zone_id)] = row
-    for feat in painted["features"]:
-        loc = int(feat["properties"]["location_id"])
-        row = by_zone.get(loc)
-        ratio = None if row is None else row.demand_ratio
+        for row in live_view.itertuples(index=False):
+            by_zone[int(row.pickup_zone_id)] = {
+                "demand_ratio": row.demand_ratio,
+                "current_trip_count": row.current_trip_count,
+            }
+
+    features = []
+    for feat in geojson["features"]:
+        props = dict(feat["properties"])
+        loc = int(props["location_id"])
+        data = by_zone.get(loc)
+        ratio = None if data is None else data["demand_ratio"]
         ratio = None if ratio is not None and pd.isna(ratio) else (None if ratio is None else float(ratio))
-        trips = None if row is None else int(row.current_trip_count)
-        feat["properties"]["demand_ratio"] = ratio
-        feat["properties"]["current_trip_count"] = trips
-        feat["properties"]["zone_label"] = f"{loc} — {feat['properties']['zone']}"
+        trips = None if data is None else int(data["current_trip_count"])
+        props["demand_ratio"] = ratio
+        props["current_trip_count"] = trips
+        props["zone_label"] = f"{loc} — {props['zone']}"
         color = ratio_fill_color(ratio)
-        feat["properties"]["fill_color"] = color
-        feat["properties"]["fill_r"] = color[0]
-        feat["properties"]["fill_g"] = color[1]
-        feat["properties"]["fill_b"] = color[2]
-        feat["properties"]["fill_a"] = color[3]
-    return painted
+        props["fill_color"] = color
+        props["fill_r"] = color[0]
+        props["fill_g"] = color[1]
+        props["fill_b"] = color[2]
+        props["fill_a"] = color[3]
+        features.append({
+            "type": feat["type"],
+            "geometry": feat["geometry"],
+            "properties": props,
+        })
+    return {"type": geojson.get("type", "FeatureCollection"), "features": features}

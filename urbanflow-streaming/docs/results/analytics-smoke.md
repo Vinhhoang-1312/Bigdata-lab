@@ -1,22 +1,22 @@
 # Analytics Smoke Result
 
-Date: 2026-09-14T13:17:49Z
+Date: 2026-09-22T16:57:27Z
 Status: `PASS`
 
 ## Summary
 
 - Historical rows: `534240`
-- Live rows: `4394`
-- Prepared view rows: `4394`
-- Latest-window rows: `1`
-- Painted zone polygons: `1`
-- High-demand latest zones: `0`
+- Live rows: `2096`
+- Prepared view rows: `2096`
+- Latest-window rows: `2`
+- Painted zone polygons: `2`
+- High-demand latest zones: `2`
 - Chart mode: `line`
-- Latest window: `2023-02-14 18:05 NY`
-- Streamlit URL: `http://127.0.0.1:8501`
+- Latest window: `2025-01-07 01:50 NY`
+- Streamlit URL: `http://localhost:8501`
 - Streamlit HTTP status: `200`
 - Historical path: `s3a://urbanflow/gold/historical_zone_baseline/`
-- Live path: `s3a://urbanflow/gold/live_zone_metrics/task6/task6_20260914_003/`
+- Live path: `s3a://urbanflow/gold/live_zone_metrics/live_demo/`
 - S3 endpoint: `http://localhost:8333`
 
 ## Reasons

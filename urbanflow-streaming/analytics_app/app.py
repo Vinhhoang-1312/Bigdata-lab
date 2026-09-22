@@ -228,22 +228,28 @@ historical_path, live_path, lookup_path = _paths()
 reader = GoldReader(historical_path, live_path)
 
 try:
-    live, historical, lookup = load_once_per_session(
+    historical, lookup = load_once_per_session(
         st.session_state,
-        (historical_path, live_path, lookup_path),
-        lambda: (reader.live(), reader.historical(), load_zone_lookup(lookup_path)),
+        (historical_path, lookup_path),
+        lambda: (reader.historical(), load_zone_lookup(lookup_path)),
     )
 except Exception as exc:
-    st.error(f"Unable to read Gold data: {exc}")
+    st.error(f"Unable to read Gold baseline: {exc}")
     st.stop()
 
-view = prepare_live_view(live, lookup)
-if view.empty:
+try:
+    initial_live = reader.live()
+except Exception as exc:
+    st.error(f"Unable to read Gold live data: {exc}")
+    st.stop()
+
+view_init = prepare_live_view(initial_live, lookup)
+if view_init.empty:
     st.info("No Live Gold rows are available yet.")
     st.stop()
 
 id_to_name = (
-    view.drop_duplicates("pickup_zone_id")
+    view_init.drop_duplicates("pickup_zone_id")
     .set_index("pickup_zone_id")["zone_name"]
     .to_dict()
 )
@@ -255,26 +261,42 @@ selected_ids = st.sidebar.multiselect(
     format_func=lambda z: f"{z}  {id_to_name[z]}",
 )
 selected_labels = [f"{z} — {id_to_name[z]}" for z in selected_ids]
-dates = view["window_start_local"].dt.date
+dates = view_init["window_start_local"].dt.date
 date_range = st.sidebar.date_input("Window dates", (dates.min(), dates.max()))
 
-filtered = view[view.pickup_zone_id.isin(selected_ids)] if selected_ids else view.iloc[0:0]
-if isinstance(date_range, tuple) and len(date_range) == 2:
-    filtered = filtered[
-        (filtered.window_start_local.dt.date >= date_range[0])
-        & (filtered.window_start_local.dt.date <= date_range[1])
-    ]
-
-latest = (
-    filtered[filtered.window_start_local == filtered.window_start_local.max()]
-    if not filtered.empty
-    else filtered
-)
-high = int(latest["is_high_demand"].sum()) if not latest.empty else 0
-latest_label = latest.window_label.iloc[0] if not latest.empty else "—"
+auto_refresh = st.sidebar.toggle("⚡ Auto-refresh (every 10s)", value=True)
+if st.sidebar.button("🔄 Refresh Now", use_container_width=True):
+    st.rerun()
 
 
-def live_body() -> None:
+@st.fragment(run_every=10 if auto_refresh else None)
+def live_dashboard() -> None:
+    try:
+        live = reader.live()
+    except Exception as exc:
+        st.error(f"Unable to read live Gold data: {exc}")
+        return
+
+    view = prepare_live_view(live, lookup)
+    if view.empty:
+        st.info("No Live Gold rows are available yet.")
+        return
+
+    filtered = view[view.pickup_zone_id.isin(selected_ids)] if selected_ids else view.iloc[0:0]
+    if isinstance(date_range, tuple) and len(date_range) == 2:
+        filtered = filtered[
+            (filtered.window_start_local.dt.date >= date_range[0])
+            & (filtered.window_start_local.dt.date <= date_range[1])
+        ]
+
+    latest = (
+        filtered[filtered.window_start_local == filtered.window_start_local.max()]
+        if not filtered.empty
+        else filtered
+    )
+    high = int(latest["is_high_demand"].sum()) if not latest.empty else 0
+    latest_label = latest.window_label.iloc[0] if not latest.empty else "—"
+
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Data mode", "Fixture Gold" if live_path.endswith(".jsonl") else "Integrated Gold")
     clock = latest.window_start_local.max().strftime("%H:%M") if not latest.empty else "—"
@@ -305,7 +327,7 @@ def live_body() -> None:
             st.altair_chart(line_comparison_chart(filtered, "zone_label"), width=1200)
         show_table(filtered)
     with explorer:
-        zone = st.selectbox("Zone", selected_labels or [f"{z} — {id_to_name[z]}" for z in zone_ids])
+        zone = st.selectbox("Zone", selected_labels or [f"{z} — {id_to_name[z]}" for z in zone_ids], key="explorer_zone_select")
         zone_rows = filtered[filtered.zone_label == zone]
         if zone_rows.empty:
             st.info("No rows for this zone.")
@@ -335,10 +357,12 @@ def live_body() -> None:
         show_table(ranked)
 
 
-live_body()
+live_dashboard()
 
 with st.expander("Historical baseline"):
     hist = historical[historical.pickup_zone_id.isin(selected_ids)] if selected_ids else historical
     named = lookup.loc[:, ["pickup_zone_id", "zone_name"]]
     hist = hist.merge(named, on="pickup_zone_id", how="left")
     st.dataframe(hist, width=1200, hide_index=True)
+
+

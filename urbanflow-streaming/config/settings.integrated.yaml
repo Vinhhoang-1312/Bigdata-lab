@@ -1,0 +1,16 @@
+profile: integrated
+time:
+  analytics_timezone: America/New_York
+streaming:
+  watermark: 10 minutes
+  trigger: 15 seconds
+kafka:
+  bootstrap_servers: kafka:9092
+  topic: urbanflow.trip-events
+storage:
+  historical_baseline: s3a://urbanflow/gold/historical_zone_baseline/
+  live_metrics: s3a://urbanflow/gold/live_zone_metrics/live_demo/
+  streaming_checkpoint: s3a://urbanflow/checkpoints/live_trip_metrics/live_demo/
+seaweedfs:
+  s3_endpoint: http://seaweedfs:8333
+  path_style_access: true

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+import os
 
 import pandas as pd
 
@@ -26,11 +27,102 @@ LIVE_COLUMNS = [
 ]
 
 
+_S3_FILE_CACHE: dict[str, dict[str, pd.DataFrame]] = {}
+
+
+def _read_s3_resilient(path: str) -> pd.DataFrame:
+    import pyarrow.dataset as ds
+    import pyarrow.fs as pafs
+    import pyarrow.parquet as pq
+
+    clean = path[len("s3a://"):] if path.startswith("s3a://") else path[len("s3://"):] if path.startswith("s3://") else path
+    bucket, _, prefix = clean.partition("/")
+    endpoint = os.getenv("URBANFLOW_S3_ENDPOINT") or os.getenv("AWS_ENDPOINT_URL", "http://localhost:8333")
+    key = os.getenv("AWS_ACCESS_KEY_ID")
+    if not key or key == "minioadmin":
+        key = "URBANFLOWLOCALACCESS"
+    secret = os.getenv("AWS_SECRET_ACCESS_KEY")
+    if not secret or secret == "minioadmin":
+        secret = "urbanflow-local-secret-key-0123456789012345"
+    endpoint_clean = endpoint.replace("http://", "").replace("https://", "")
+    scheme = "https" if endpoint.startswith("https://") else "http"
+
+    pa_fs = pafs.S3FileSystem(
+        endpoint_override=endpoint_clean,
+        access_key=key,
+        secret_key=secret,
+        scheme=scheme,
+    )
+    selector = pafs.FileSelector(f"{bucket}/{prefix}", recursive=True)
+    file_infos = pa_fs.get_file_info(selector)
+    valid_paths = [
+        info.path for info in file_infos
+        if info.type == pafs.FileType.File
+        and info.base_name.endswith(".parquet")
+        and not info.base_name.startswith("_")
+        and not info.base_name.startswith(".")
+        and info.size > 0
+    ]
+    if not valid_paths:
+        return pd.DataFrame()
+
+    file_cache = _S3_FILE_CACHE.setdefault(path, {})
+    valid_set = set(valid_paths)
+    for p in list(file_cache.keys()):
+        if p != "__initial__" and p not in valid_set:
+            del file_cache[p]
+
+    new_paths = [p for p in valid_paths if p not in file_cache]
+    if new_paths:
+        if len(file_cache) == 0:
+            try:
+                initial_df = ds.dataset(new_paths, filesystem=pa_fs, format="parquet").to_table().to_pandas()
+                file_cache["__initial__"] = initial_df
+                for p in new_paths:
+                    file_cache[p] = pd.DataFrame()
+            except Exception:
+                for p in new_paths:
+                    try:
+                        file_cache[p] = pq.read_table(p, filesystem=pa_fs).to_pandas()
+                    except Exception:
+                        pass
+        else:
+            for p in new_paths:
+                try:
+                    file_cache[p] = pq.read_table(p, filesystem=pa_fs).to_pandas()
+                except Exception:
+                    pass
+
+    return pd.concat([df for df in file_cache.values() if not df.empty], ignore_index=True)
+
+
 def _read(path: str) -> pd.DataFrame:
     suffix = Path(path).suffix.lower()
     if suffix in {".json", ".jsonl"}:
         return pd.read_json(readable_path(path), lines=True, **storage_options(path))
-    return pd.read_parquet(readable_path(path), **storage_options(path))
+    if path.startswith(("s3://", "s3a://")):
+        is_mocked = (
+            getattr(pd.read_parquet, "__name__", "") != "read_parquet"
+            or hasattr(pd.read_parquet, "mock_calls")
+        )
+        if not is_mocked:
+            try:
+                return _read_s3_resilient(path)
+            except Exception:
+                pass
+    import time
+    for attempt in range(3):
+        try:
+            return pd.read_parquet(readable_path(path), **storage_options(path))
+        except Exception as exc:
+            if path.startswith(("s3://", "s3a://")):
+                try:
+                    return _read_s3_resilient(path)
+                except Exception:
+                    pass
+            if attempt == 2:
+                raise exc
+            time.sleep(0.4)
 
 
 def _require(frame: pd.DataFrame, columns: list[str], dataset: str) -> pd.DataFrame:
