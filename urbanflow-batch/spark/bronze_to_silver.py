@@ -51,7 +51,8 @@ def main() -> None:
 
     assert_silver_contract(result.silver)
     (
-        result.silver.write.mode(settings.write_mode)
+        result.silver.sortWithinPartitions("pickup_datetime")
+        .write.mode(settings.write_mode)
         .partitionBy("year", "month")
         .parquet(settings.silver_output_path)
     )

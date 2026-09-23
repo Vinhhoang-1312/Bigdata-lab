@@ -26,7 +26,29 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", default=str(DEFAULT_CONFIG))
     parser.add_argument("--mode", choices=("fixture", "integrated"), default="fixture")
-    parser.add_argument("--rate", type=float, default=100.0)
+    parser.add_argument(
+        "--rate",
+        type=float,
+        default=None,
+        help="Fixed event rate (legacy mode)",
+    )
+    parser.add_argument(
+        "--speedup",
+        type=float,
+        default=None,
+        help="Proportional virtual clock acceleration factor (e.g. 60.0 for 1s wall = 1m virtual)",
+    )
+    parser.add_argument(
+        "--max-rate",
+        type=float,
+        default=None,
+        help="Burst limiter: maximum events per second (e.g. 500 eps)",
+    )
+    parser.add_argument(
+        "--loop",
+        action="store_true",
+        help="Continuously loop dataset with monotonic timestamp rebasing",
+    )
     parser.add_argument("--max-events", type=int)
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--print-events", type=int, default=0)
@@ -43,7 +65,7 @@ def main() -> int:
     config = load_config(args.config)
 
     if args.mode == "fixture":
-        records = iter_fixture(config.fixture_path)
+        records = lambda: iter_fixture(config.fixture_path)
         valid_zone_ids = load_zone_ids(ZONE_FIXTURE)
     else:
         count = integrated_row_count(
@@ -54,7 +76,7 @@ def main() -> int:
             config.replay_end_date,
         )
         print(f"integrated_replay_rows={count}")
-        records = iter_integrated(
+        records = lambda: iter_integrated(
             config.integrated_silver_uri,
             config.s3_endpoint,
             config.s3_region,
@@ -69,6 +91,9 @@ def main() -> int:
         topic=config.topic,
         bootstrap_servers=config.bootstrap_servers,
         rate=args.rate,
+        speedup=args.speedup,
+        max_rate=args.max_rate,
+        loop=args.loop,
         max_events=args.max_events,
         dry_run=args.dry_run,
         print_events=args.print_events,
@@ -83,6 +108,8 @@ def main() -> int:
             "topic": config.topic,
             "interrupted": interrupted,
             "run_id": run_id,
+            "speedup": args.speedup,
+            "loop": args.loop,
         }
     )
     rendered = json.dumps(result, sort_keys=True)

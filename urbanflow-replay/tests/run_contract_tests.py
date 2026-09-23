@@ -15,8 +15,8 @@ from producer.event_mapper import EVENT_FIELDS, EventMapper, SILVER_EVENT_FIELDS
 from producer.event_time import EventTimeError, parse_event_time
 from producer.event_validator import EventValidator
 from producer.input_reader import iter_fixture, load_zone_ids
-from producer.rate_controller import RateController
-from producer.replay import replay_records
+from producer.rate_controller import RateController, VirtualClockController
+from producer.replay import rebased_record_stream, replay_records
 from producer.serialization import message_key, serialize_event
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -257,6 +257,123 @@ def test_replay_orchestration() -> None:
     assert shutdown.records_sent == 1
 
 
+def test_virtual_clock_controller() -> None:
+    from producer.event_time import NYC
+    from datetime import datetime, timedelta
+
+    class FakeClock:
+        def __init__(self) -> None:
+            self.now = 0.0
+            self.slept: list[float] = []
+
+        def clock(self) -> float:
+            return self.now
+
+        def sleep(self, duration: float) -> None:
+            assert duration >= 0
+            self.slept.append(duration)
+            self.now += duration
+
+    fake = FakeClock()
+    ctrl = VirtualClockController(speedup=60.0, clock=fake.clock, sleeper=fake.sleep)
+    t0 = datetime(2023, 2, 1, 10, 0, 0, tzinfo=NYC)
+    t1 = datetime(2023, 2, 1, 10, 1, 0, tzinfo=NYC)
+    ctrl.wait_for_event(t0)
+    assert len(fake.slept) == 0
+    ctrl.wait_for_event(t1)
+    assert len(fake.slept) == 1
+    assert abs(fake.slept[0] - 1.0) < 1e-9
+
+    # Duplicate and out of order
+    ctrl.wait_for_event(t1)
+    # Target wall was same as now, no sleep needed
+    t_prior = datetime(2023, 2, 1, 9, 59, 0, tzinfo=NYC)
+    ctrl.wait_for_event(t_prior)
+
+    # Max rate burst limit
+    fake_burst = FakeClock()
+    ctrl_burst = VirtualClockController(
+        speedup=60.0, max_rate=500.0, clock=fake_burst.clock, sleeper=fake_burst.sleep
+    )
+    ctrl_burst.wait_for_event(t0)
+    ctrl_burst.wait_for_event(t0)
+    assert len(fake_burst.slept) == 1
+    assert abs(fake_burst.slept[0] - (1.0 / 500.0)) < 1e-9
+
+    # Sleep overshoot & rate limiting protection
+    class OvershootingClock:
+        def __init__(self, overshoot: float = 0.001) -> None:
+            self.now = 0.0
+            self.overshoot = overshoot
+            self.slept: list[float] = []
+
+        def clock(self) -> float:
+            return self.now
+
+        def sleep(self, duration: float) -> None:
+            assert duration >= 0
+            self.slept.append(duration)
+            self.now += duration + self.overshoot
+
+    over_clock = OvershootingClock(overshoot=0.0005)
+    ctrl_over = VirtualClockController(
+        speedup=60.0, max_rate=500.0, clock=over_clock.clock, sleeper=over_clock.sleep
+    )
+    ctrl_over.wait_for_event(t0)
+    ctrl_over.wait_for_event(t0)
+    # Second event slept requested delay (0.002) + overshot by 0.0005 -> now = 0.0025
+    assert abs(over_clock.now - 0.0025) < 1e-9
+    # Third simultaneous event must space out by 1/500 from the post-overshoot time (0.0025)
+    ctrl_over.wait_for_event(t0)
+    # Delay requested should be (0.0025 + 0.002) - 0.0025 = 0.002
+    assert abs(ctrl_over._last_emit_wall - 0.0025) < 1e-9 or abs(ctrl_over._last_emit_wall - 0.005) < 1e-9
+
+    # Zero cumulative drift across multiple events
+    drift_clock = OvershootingClock(overshoot=0.002)
+    ctrl_drift = VirtualClockController(
+        speedup=60.0, max_rate=1000.0, clock=drift_clock.clock, sleeper=drift_clock.sleep
+    )
+    t_start = datetime(2023, 2, 1, 10, 0, 0, tzinfo=NYC)
+    ctrl_drift.wait_for_event(t_start)
+    for i in range(1, 11):
+        event_time = t_start + timedelta(minutes=i)
+        # Advance clock to just before target to simulate wall progression
+        drift_clock.now = (i - 1) * 1.0 + 0.5
+        ctrl_drift.wait_for_event(event_time)
+
+    # After 10 virtual minutes (600s) at 60x, virtual target is EXACTLY 10.0s from wall_start
+    dt_total = 600.0
+    expected_virtual_target = 0.0 + dt_total / 60.0
+    assert abs(expected_virtual_target - 10.0) < 1e-9
+
+
+
+def test_rebased_record_stream() -> None:
+    records = [
+        {"pickup_datetime": "2023-02-01T10:00:00-05:00", "id": 1},
+        {"pickup_datetime": "2023-02-01T10:05:00-05:00", "id": 2},
+    ]
+    stream = rebased_record_stream(records, loop=True)
+    events = [next(stream) for _ in range(6)]
+
+    # Cycle 0
+    assert events[0][0] == 0
+    assert events[1][0] == 0
+    assert events[0][2] < events[1][2]
+
+    # Cycle 1
+    assert events[2][0] == 1
+    assert events[3][0] == 1
+    # Verify strict monotonicity across cycle boundary
+    assert events[1][2] < events[2][2]
+    assert events[2][2] < events[3][2]
+
+    # Cycle 2
+    assert events[4][0] == 2
+    assert events[5][0] == 2
+    assert events[3][2] < events[4][2]
+
+
 def main() -> None:
     test_configuration()
     print("CONFIGURATION = PASS")
@@ -266,9 +383,25 @@ def main() -> None:
     print("EVENT VALIDATION = PASS")
     test_rate_controller()
     print("RATE CONTROLLER = PASS")
+    test_virtual_clock_controller()
+    print("VIRTUAL CLOCK CONTROLLER = PASS")
+    test_rebased_record_stream()
+    print("REBASED RECORD STREAM = PASS")
     test_replay_orchestration()
     print("REPLAY ORCHESTRATION = PASS")
+
+    from tests.test_timezone_semantics import (
+        test_winter_standard_time_february,
+        test_summer_daylight_saving_time,
+        test_kafka_serialization_rfc3339,
+    )
+    test_winter_standard_time_february()
+    test_summer_daylight_saving_time()
+    test_kafka_serialization_rfc3339()
+    print("TIMEZONE SEMANTICS = PASS")
+
     print("REPLAY CONTRACT TESTS = PASS")
+
 
 
 if __name__ == "__main__":

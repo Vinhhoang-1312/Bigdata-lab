@@ -29,14 +29,28 @@ def configure_session(spark: SparkSession) -> SparkSession:
     return spark
 
 
-def aggregate_current(events: DataFrame, watermark: str = DEFAULT_WATERMARK) -> DataFrame:
-    """Count pickups in clock-aligned five-minute event-time tumbling windows."""
+def aggregate_current(
+    events: DataFrame,
+    watermark: str = DEFAULT_WATERMARK,
+    window_duration: str = "5 minutes",
+    slide_duration: str | None = None,
+) -> DataFrame:
+    """Count pickups in clock-aligned event-time tumbling or sliding windows."""
+    window_spec = (
+        F.window("event_timestamp", window_duration, slide_duration)
+        if slide_duration
+        else F.window("event_timestamp", window_duration)
+    )
     return (
         events.withWatermark("event_timestamp", watermark)
-        .groupBy(F.window("event_timestamp", "5 minutes"), "pickup_zone_id")
+        .groupBy(window_spec, "pickup_zone_id")
         .agg(F.count(F.lit(1)).cast("long").alias("current_trip_count"))
-        .select(F.col("window.start").alias("window_start"),
-                F.col("window.end").alias("window_end"), "pickup_zone_id", "current_trip_count")
+        .select(
+            F.col("window.start").alias("window_start"),
+            F.col("window.end").alias("window_end"),
+            "pickup_zone_id",
+            "current_trip_count",
+        )
     )
 
 
@@ -67,10 +81,27 @@ def join_historical(current: DataFrame, historical: DataFrame) -> DataFrame:
     )
 
 
-def transform(source: DataFrame, historical: DataFrame, watermark: str = DEFAULT_WATERMARK) -> tuple[DataFrame, DataFrame]:
+def transform(
+    source: DataFrame,
+    historical: DataFrame,
+    watermark: str = DEFAULT_WATERMARK,
+    window_duration: str = "5 minutes",
+    slide_duration: str | None = None,
+) -> tuple[DataFrame, DataFrame]:
     """Transform a Kafka-like value DataFrame; return Live Gold and invalid rows."""
     parsed: ParsedEvents = parse_events(source)
-    return join_historical(aggregate_current(parsed.valid, watermark), historical), parsed.invalid
+    return (
+        join_historical(
+            aggregate_current(
+                parsed.valid,
+                watermark=watermark,
+                window_duration=window_duration,
+                slide_duration=slide_duration,
+            ),
+            historical,
+        ),
+        parsed.invalid,
+    )
 
 
 def read_kafka(spark: SparkSession, bootstrap_servers: str, topic: str) -> DataFrame:
@@ -163,7 +194,17 @@ def main() -> None:
         source = spark.readStream.format("text").load(args.fixture_events).select(F.col("value"))
     else:
         source = read_kafka(spark, cfg["kafka"]["bootstrap_servers"], cfg["kafka"]["topic"])
-    gold, invalid = transform(source, historical, cfg["streaming"]["watermark"])
+    streaming_cfg = cfg.get("streaming", {})
+    watermark = streaming_cfg.get("watermark", DEFAULT_WATERMARK)
+    window_duration = streaming_cfg.get("window_duration", "5 minutes")
+    slide_duration = streaming_cfg.get("slide_duration")
+    gold, invalid = transform(
+        source,
+        historical,
+        watermark=watermark,
+        window_duration=window_duration,
+        slide_duration=slide_duration,
+    )
     available_now = bool(args.fixture_events or args.available_now)
     validate_runtime_paths(cfg["storage"]["live_metrics"], cfg["storage"]["streaming_checkpoint"])
     invalid_query = write_invalid_rows(invalid, cfg["streaming"]["trigger"], available_now)

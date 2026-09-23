@@ -83,12 +83,78 @@ docker compose run --rm replay-python \
   --mode fixture --dry-run --print-events 7
 ```
 
-Publish 10,000 real February events at 1,000 events/sec:
+Publish 10,000 real February events at 1,000 events/sec (fixed-rate mode):
 
 ```bash
 docker compose run --rm replay-python \
   python /workspace/urbanflow-replay/producer/replay_trips.py \
   --mode integrated --rate 1000 --max-events 10000 --print-events 1
+```
+
+### Continuous Virtual Time Replay
+
+Accelerate historical event time proportionally while preserving relative inter-arrival times:
+
+```bash
+# 60x acceleration (1s wall time = 1m event time), dynamic burst limiter, continuous looping
+docker compose run --rm replay-python \
+  python /workspace/urbanflow-replay/producer/replay_trips.py \
+  --mode integrated --speedup 60 --loop
+```
+
+- `--speedup <N>`: Event time acceleration factor (e.g., 60 for 60x, 300 for 300x).
+- `--max-rate <N>`: Optional burst limiter bounding peak events/sec. When omitted, Python automatically sets `max_rate = max(500.0, 4.0 * speedup)`.
+- `--loop`: Continuously loops dataset with strictly monotonic timestamp rebasing, preventing Spark watermark drops.
+
+#### Unified `MAX_RATE` Policy & Empirical Basis
+
+Python (`replay.py`) serves as the single source of truth for replay rate limiting:
+
+$$\text{max\_rate} = \max(500.0,\, 4.0 \times \text{speedup})$$
+
+**Empirical Derivation (February 2023 NYC TLC Workload):**
+- Total trips: 2,888,729 over 28 days (2,419,200 seconds) $\rightarrow$ average baseline rate of $\approx 1.194\text{ trips/sec}$ in 1x real time.
+- **At 60x acceleration:**
+  - Mean rate: $1.194 \times 60 \approx 71.6\text{ eps}$.
+  - 99th percentile peak rate: $\approx 148\text{ eps}$.
+  - Maximum 1-second burst: $\approx 200\text{ eps}$.
+  - Default limiter: $\max(500.0, 240.0) = 500\text{ eps}$ ($>2.5\times$ headroom over p99 peak, preventing unnatural smoothing of real traffic bursts).
+- **At 300x acceleration:**
+  - Mean rate: $1.194 \times 300 \approx 358.2\text{ eps}$.
+  - 99th percentile peak rate: $\approx 713\text{ eps}$.
+  - Maximum 1-second burst: $\approx 960\text{ eps}$.
+  - Default limiter: $\max(500.0, 1200.0) = 1200\text{ eps}$ (accommodates 960 eps burst while shielding local Kafka/Spark executors from overload).
+
+#### Bounded-Memory Batch Streaming Architecture
+
+Replay implements bounded-memory batch streaming via the PyArrow Dataset Scanner:
+- **Chunk size (`batch_size`):** 8,192 rows per `RecordBatch`.
+- **Readahead parameters:** `batch_readahead=4`, `fragment_readahead=2`.
+- **Empirical validation:** Scanned all 2,888,729 rows of February 2023 Silver in SeaweedFS:
+  - Initial RSS: ~16.6 MB.
+  - Steady RSS: ~404 MB with default scanner readahead (~215 MB with single readahead).
+  - RSS remained flat across all 2.89M rows ($<0.04\text{ MB}$ drift between row 200,000 and row 2,888,729), proving strict memory boundedness without materializing the dataset in Python.
+
+#### Timezone Semantics & Rush Hour Preservation
+
+NYC TLC trip logs record timestamps in naive local New York wall-clock time (`America/New_York`):
+1. **Bronze $\rightarrow$ Silver ETL:** PySpark parses naive timestamps under session timezone `America/New_York`. Parquet files store timestamps as standard UTC instants (e.g. `2023-02-01 00:32:53 EST` is stored as `2023-02-01 05:32:53 UTC`).
+2. **Replay Reader Normalization:** PyArrow reads the naive UTC timestamp. `input_reader.py` normalizes it:
+   ```python
+   if pickup.tzinfo is None:
+       pickup = pickup.replace(tzinfo=UTC)
+   row["pickup_datetime"] = pickup.astimezone(NYC).isoformat()
+   ```
+   - Standard Time (Feb): `2023-02-15 13:30:00 UTC` $\rightarrow$ `2023-02-15T08:30:00-05:00` (hour=8 morning rush hour).
+   - Daylight Saving Time (July): `2023-07-15 12:30:00 UTC` $\rightarrow$ `2023-07-15T08:30:00-04:00` (hour=8 morning rush hour).
+   *(Note: treating naive Parquet timestamps as local via `replace(tzinfo=NYC)` would be incorrect, as it would distort an 8:30 AM morning rush hour to 1:30 PM).*
+3. **Kafka Delivery & Streaming Ingestion:** Kafka payload carries the explicit RFC 3339 offset (`-05:00` / `-04:00`), which Spark Structured Streaming parses cleanly, ensuring Live Gold metrics align with Historical Gold baseline slots.
+
+Use the root lifecycle commands for end-to-end demo execution:
+```bash
+make demo SPEEDUP=60 DEMO_MODE=integrated
+make demo-status
+make demo-stop
 ```
 
 ## Evidence and operations

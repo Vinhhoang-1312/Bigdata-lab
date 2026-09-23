@@ -3,7 +3,9 @@ time:
   analytics_timezone: America/New_York
 streaming:
   watermark: 10 minutes
-  trigger: 15 seconds
+  trigger: 5 seconds
+  window_duration: 5 minutes
+  slide_duration: 1 minute
 kafka:
   bootstrap_servers: kafka:9092
   topic: urbanflow.trip-events

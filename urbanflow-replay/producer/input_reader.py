@@ -116,13 +116,23 @@ def iter_integrated(
     start_date: str,
     end_date: str,
     batch_size: int = 8192,
+    batch_readahead: int = 4,
+    fragment_readahead: int = 2,
 ) -> Iterator[dict[str, Any]]:
+    """Streams Silver records using bounded-memory batch streaming.
+
+    Uses PyArrow Dataset Scanner to yield records batch-by-batch without materializing
+    the entire dataset in Python memory. Parquet timestamps (stored as UTC instants)
+    are normalized to authentic New York local wall-clock time with explicit RFC 3339
+    UTC offsets (e.g. -05:00 for EST, -04:00 for EDT).
+    """
     source = _s3_dataset(uri, endpoint, region)
     scanner = source.scanner(
         columns=list(SILVER_EVENT_FIELDS),
         filter=_partition_filter(start_date, end_date),
         batch_size=batch_size,
-        use_threads=True,
+        batch_readahead=batch_readahead,
+        fragment_readahead=fragment_readahead,
     )
     for batch in scanner.to_batches():
         for row in batch.to_pylist():
@@ -135,3 +145,4 @@ def iter_integrated(
                 pickup = pickup.replace(tzinfo=UTC)
             row["pickup_datetime"] = pickup.astimezone(NYC).isoformat()
             yield row
+
