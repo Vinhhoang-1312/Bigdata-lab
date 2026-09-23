@@ -65,3 +65,34 @@ Run the smallest relevant tests after each change. Re-run Foundation validation
 for contract-related changes and the S3A smoke test for storage/runtime changes.
 Update relevant READMEs, runbooks, results, and the environment lock when
 validated behavior or versions change.
+
+## System Navigation Links
+
+Sidebar navigation links with accurate port descriptors:
+
+• Streamlit Analytics Dashboard: http://localhost:8501
+• FastAPI Health API: http://localhost:8000/v1/streaming/health
+• FastAPI OpenAPI Documentation: http://localhost:8000/docs
+• Spark Driver Web UI: http://localhost:4040 (active during streaming job)
+• Spark Master Web UI: http://localhost:8080 (idle background infrastructure)
+• Spark Worker 1 Web UI: http://localhost:8081 (idle background infrastructure)
+• Spark Worker 2 Web UI: http://localhost:8082 (idle background infrastructure)
+• SeaweedFS S3 API: http://localhost:8333 (explicitly noted as an S3 API endpoint, not a web console)
+• SeaweedFS Filer: http://localhost:8888
+• SeaweedFS Master UI: http://localhost:9333
+
+## One-Command Demo Lifecycle (`make demo`)
+
+UrbanFlow features an automated One-Command Demo orchestration for continuous ingestion, virtual time replay, streaming sliding-window aggregations, and the Glass Cockpit observability plane.
+
+Primary control commands:
+
+- `make demo` — Starts the complete stack (SeaweedFS, Kafka, Spark cluster, bucket and topic initialization, Spark Structured Streaming driver on port `4040`, virtual time replay producer at 60x acceleration in continuous loop mode, FastAPI observability service on port `8000`, and Streamlit dashboard on port `8501`).
+- `make demo-status` — Queries live component health, FastAPI telemetry, Streamlit status, Spark heartbeat (`.telemetry/streaming_health.json`), Kafka partition backlogs, and virtual time replay clock.
+- `make demo-stop` — Cleanly and idempotently stops demo containers and reclaims host ports `8000` and `8501` without orphaned processes.
+- `make test` — Runs the end-to-end test suite across all subprojects (contract fixtures, replay serialization, streaming smoke, observability health state machine, and global chronological monotonicity scans).
+
+Runtime overrides:
+`make demo SPEEDUP=300` (e.g. 300x acceleration), `make demo DEMO_MODE=fixture`, `make demo STREAMLIT_PORT=8502 FASTAPI_PORT=8001`.
+
+Detailed operator instructions, architecture diagrams, and health state semantics are documented in `docs/demo-runbook.md`.

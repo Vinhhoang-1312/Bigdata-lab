@@ -10,9 +10,13 @@ from pyspark.sql import DataFrame, SparkSession, functions as F
 try:  # Supports both package imports and spark-submit of this file.
     from .event_schema import ParsedEvents, parse_events
     from .historical_lookup import KEY, load_historical_baseline
+    from .streaming_metrics import UrbanFlowMetricsListener
+    from .telemetry_writer import start_telemetry_writer
 except ImportError:
     from event_schema import ParsedEvents, parse_events
     from historical_lookup import KEY, load_historical_baseline
+    from streaming_metrics import UrbanFlowMetricsListener
+    from telemetry_writer import start_telemetry_writer
 
 ANALYTICS_TIMEZONE = "America/New_York"
 DEFAULT_WATERMARK = "10 minutes"
@@ -26,6 +30,8 @@ FOUNDATION_FIXTURES = (REPO_ROOT / "urbanflow-foundation" / "fixtures").resolve(
 
 def configure_session(spark: SparkSession) -> SparkSession:
     spark.conf.set("spark.sql.session.timeZone", ANALYTICS_TIMEZONE)
+    spark.conf.set("spark.sql.streaming.stateStore.stateSchemaCheck", "false")
+    spark.conf.set("spark.sql.shuffle.partitions", "4")
     return spark
 
 
@@ -188,6 +194,9 @@ def main() -> None:
     args = parser.parse_args()
     cfg = _settings(args.config)
     spark = configure_session(SparkSession.builder.appName("UrbanFlowLiveMetrics").getOrCreate())
+    if not (args.fixture_events or args.available_now):
+        listener = UrbanFlowMetricsListener()
+        spark.streams.addListener(listener)
     historical = load_historical_baseline(spark, cfg["storage"]["historical_baseline"])
     if args.fixture_events:
         # File streams require a directory; copy fixtures to an input directory in real runs.
@@ -211,6 +220,11 @@ def main() -> None:
     query = write_live_gold(gold, cfg["storage"]["live_metrics"],
                             cfg["storage"]["streaming_checkpoint"],
                             cfg["streaming"]["trigger"], available_now)
+    
+    if not available_now:
+        telemetry_path = cfg.get("telemetry", {}).get("heartbeat_path", "/workspace/.telemetry/streaming_health.json")
+        _telemetry_thread = start_telemetry_writer(listener, telemetry_path)
+
     try:
         query.awaitTermination()
         if available_now:

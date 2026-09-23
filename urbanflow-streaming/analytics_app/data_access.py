@@ -47,14 +47,21 @@ def _read_s3_resilient(path: str) -> pd.DataFrame:
     endpoint_clean = endpoint.replace("http://", "").replace("https://", "")
     scheme = "https" if endpoint.startswith("https://") else "http"
 
-    pa_fs = pafs.S3FileSystem(
-        endpoint_override=endpoint_clean,
-        access_key=key,
-        secret_key=secret,
-        scheme=scheme,
-    )
-    selector = pafs.FileSelector(f"{bucket}/{prefix}", recursive=True)
-    file_infos = pa_fs.get_file_info(selector)
+    file_cache = _S3_FILE_CACHE.setdefault(path, {})
+
+    try:
+        pa_fs = pafs.S3FileSystem(
+            endpoint_override=endpoint_clean,
+            access_key=key,
+            secret_key=secret,
+            scheme=scheme,
+        )
+        selector = pafs.FileSelector(f"{bucket}/{prefix}", recursive=True)
+        file_infos = pa_fs.get_file_info(selector)
+    except Exception:
+        dfs = [df for df in file_cache.values() if not df.empty]
+        return pd.concat(dfs, ignore_index=True) if dfs else pd.DataFrame()
+
     valid_paths = [
         info.path for info in file_infos
         if info.type == pafs.FileType.File
@@ -64,36 +71,47 @@ def _read_s3_resilient(path: str) -> pd.DataFrame:
         and info.size > 0
     ]
     if not valid_paths:
+        _S3_FILE_CACHE.pop(path, None)
         return pd.DataFrame()
 
-    file_cache = _S3_FILE_CACHE.setdefault(path, {})
     valid_set = set(valid_paths)
     for p in list(file_cache.keys()):
-        if p != "__initial__" and p not in valid_set:
+        if p != "__all__" and p not in valid_set:
             del file_cache[p]
 
     new_paths = [p for p in valid_paths if p not in file_cache]
     if new_paths:
-        if len(file_cache) == 0:
+        # Fast bulk load for static datasets (e.g. historical baseline) when cache is cold
+        if "historical" in path and len(file_cache) == 0:
             try:
-                initial_df = ds.dataset(new_paths, filesystem=pa_fs, format="parquet").to_table().to_pandas()
-                file_cache["__initial__"] = initial_df
+                table = ds.dataset(new_paths, filesystem=pa_fs, format="parquet").to_table()
+                bulk_df = table.to_pandas()
+                file_cache["__all__"] = bulk_df
                 for p in new_paths:
                     file_cache[p] = pd.DataFrame()
+                return bulk_df
             except Exception:
-                for p in new_paths:
-                    try:
-                        file_cache[p] = pq.read_table(p, filesystem=pa_fs).to_pandas()
-                    except Exception:
-                        pass
-        else:
+                pass
+
+        try:
+            bulk_df = ds.dataset(new_paths, filesystem=pa_fs, format="parquet").to_table().to_pandas()
+            for p in new_paths[:-1]:
+                file_cache[p] = pd.DataFrame()
+            file_cache[new_paths[-1]] = bulk_df
+        except Exception:
+            # If bulk read fails (e.g. an in-flight file in the list), read completed files individually
             for p in new_paths:
                 try:
                     file_cache[p] = pq.read_table(p, filesystem=pa_fs).to_pandas()
                 except Exception:
+                    # In-flight or uncommitted file (Spark is still writing/flushing footer).
+                    # Skip for this cycle; it will be retried on the next refresh.
                     pass
 
-    return pd.concat([df for df in file_cache.values() if not df.empty], ignore_index=True)
+    dfs = [df for df in file_cache.values() if not df.empty]
+    if not dfs:
+        return pd.DataFrame()
+    return pd.concat(dfs, ignore_index=True)
 
 
 def _read(path: str) -> pd.DataFrame:
@@ -106,26 +124,20 @@ def _read(path: str) -> pd.DataFrame:
             or hasattr(pd.read_parquet, "mock_calls")
         )
         if not is_mocked:
-            try:
-                return _read_s3_resilient(path)
-            except Exception:
-                pass
+            return _read_s3_resilient(path)
     import time
     for attempt in range(3):
         try:
             return pd.read_parquet(readable_path(path), **storage_options(path))
         except Exception as exc:
-            if path.startswith(("s3://", "s3a://")):
-                try:
-                    return _read_s3_resilient(path)
-                except Exception:
-                    pass
             if attempt == 2:
                 raise exc
             time.sleep(0.4)
 
 
 def _require(frame: pd.DataFrame, columns: list[str], dataset: str) -> pd.DataFrame:
+    if frame.empty and len(frame.columns) == 0:
+        return pd.DataFrame(columns=columns)
     missing = sorted(set(columns) - set(frame.columns))
     if missing:
         raise ValueError(f"{dataset} Gold missing columns: {missing}")

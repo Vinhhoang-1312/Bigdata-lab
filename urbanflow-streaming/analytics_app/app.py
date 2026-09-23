@@ -18,6 +18,7 @@ try:
     )
     from .zones import attach_demand_to_geojson, load_taxi_zone_geojson, load_zone_lookup
     from .session_cache import load_once_per_session
+    from .hud import render_glass_cockpit
 except ImportError:
     from data_access import (
         HIGH_DEMAND_RATIO,
@@ -27,6 +28,7 @@ except ImportError:
     )
     from zones import attach_demand_to_geojson, load_taxi_zone_geojson, load_zone_lookup
     from session_cache import load_once_per_session
+    from hud import render_glass_cockpit
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_HISTORICAL = ROOT / "urbanflow-foundation/fixtures/gold/historical_zone_baseline.jsonl"
@@ -57,6 +59,23 @@ def _paths() -> tuple[str, str, str]:
         default_lookup = INTEGRATED_LOOKUP if live.startswith(("s3://", "s3a://")) else str(DEFAULT_LOOKUP)
         lookup = st.text_input("Zone lookup", os.getenv("URBANFLOW_ZONE_LOOKUP_PATH", default_lookup))
     return historical, live, lookup
+
+
+def _render_system_links() -> None:
+    with st.sidebar.expander("System navigation", expanded=False):
+        st.markdown(
+            """
+            - [FastAPI Health API :8000](http://localhost:8000/v1/streaming/health)
+            - [FastAPI OpenAPI Docs :8000](http://localhost:8000/docs)
+            - [Spark Driver Web UI :4040](http://localhost:4040) *(Active streaming execution, stages, & query)*
+            - [Spark Master Web UI :8080](http://localhost:8080) *(Standalone cluster daemon - idle during local[2] streaming)*
+            - [Spark Worker 1 Web UI :8081](http://localhost:8081) *(Standalone cluster worker - idle during local[2] streaming)*
+            - [Spark Worker 2 Web UI :8082](http://localhost:8082) *(Standalone cluster worker - idle during local[2] streaming)*
+            - [SeaweedFS S3 API :8333](http://localhost:8333) *(S3 API endpoint, not a web console)*
+            - [SeaweedFS Filer :8888](http://localhost:8888)
+            - [SeaweedFS Master UI :9333](http://localhost:9333)
+            """
+        )
 
 
 def _ratio_color() -> alt.Color:
@@ -252,22 +271,15 @@ except Exception as exc:
     st.error(f"Unable to read Gold baseline: {exc}")
     st.stop()
 
-try:
-    initial_live = reader.live()
-except Exception as exc:
-    st.error(f"Unable to read Gold live data: {exc}")
-    st.stop()
+if not lookup.empty and "pickup_zone_id" in lookup.columns and "zone_name" in lookup.columns:
+    id_to_name = (
+        lookup.drop_duplicates("pickup_zone_id")
+        .set_index("pickup_zone_id")["zone_name"]
+        .to_dict()
+    )
+else:
+    id_to_name = {}
 
-view_init = prepare_live_view(initial_live, lookup)
-if view_init.empty:
-    st.info("No Live Gold rows are available yet.")
-    st.stop()
-
-id_to_name = (
-    view_init.drop_duplicates("pickup_zone_id")
-    .set_index("pickup_zone_id")["zone_name"]
-    .to_dict()
-)
 zone_ids = sorted(id_to_name)
 selected_ids = st.sidebar.multiselect(
     "Pickup zones",
@@ -276,12 +288,10 @@ selected_ids = st.sidebar.multiselect(
     format_func=lambda z: f"{z}  {id_to_name[z]}",
 )
 selected_labels = [f"{z} — {id_to_name[z]}" for z in selected_ids]
-dates = view_init["window_start_local"].dt.date
-date_range = st.sidebar.date_input("Window dates", (dates.min(), dates.max()))
 
 auto_refresh = st.sidebar.toggle("⚡ Auto-refresh (every 10s)", value=True)
-if st.sidebar.button("🔄 Refresh Now", use_container_width=True):
-    st.rerun()
+
+_render_system_links()
 
 
 @st.fragment(run_every=10 if auto_refresh else None)
@@ -289,20 +299,33 @@ def live_dashboard() -> None:
     try:
         live = reader.live()
     except Exception as exc:
-        st.error(f"Unable to read live Gold data: {exc}")
+        st.warning(f"Temporary Gold read pause: {exc}")
+        live = pd.DataFrame(columns=LIVE_COLUMNS)
+
+    render_glass_cockpit(live)
+
+    if live.empty:
+        st.info("⏳ Waiting for streaming micro-batches to materialize in Live Gold... (auto-refreshing every 10s)")
         return
 
-    view = prepare_live_view(live, lookup)
+    # Keep a rolling window of recent windows for interactive dashboard responsiveness
+    # (e.g. most recent 120 five-minute windows = 10 hours of virtual replay)
+    if "window_start" in live.columns:
+        distinct_starts = live["window_start"].drop_duplicates().sort_values()
+        if len(distinct_starts) > 120:
+            recent_cutoff = distinct_starts.iloc[-120]
+            live_recent = live[live.window_start >= recent_cutoff]
+        else:
+            live_recent = live
+    else:
+        live_recent = live
+
+    view = prepare_live_view(live_recent, lookup)
     if view.empty:
-        st.info("No Live Gold rows are available yet.")
+        st.info("⏳ Waiting for streaming micro-batches to materialize in Live Gold... (auto-refreshing every 10s)")
         return
 
     filtered = view[view.pickup_zone_id.isin(selected_ids)] if selected_ids else view.iloc[0:0]
-    if isinstance(date_range, tuple) and len(date_range) == 2:
-        filtered = filtered[
-            (filtered.window_start_local.dt.date >= date_range[0])
-            & (filtered.window_start_local.dt.date <= date_range[1])
-        ]
 
     latest = (
         filtered[filtered.window_start_local == filtered.window_start_local.max()]
@@ -319,72 +342,107 @@ def live_dashboard() -> None:
     c3.metric("Current trips", int(latest.current_trip_count.sum()) if not latest.empty else 0)
     c4.metric("High-demand zones", high, help=f"demand_ratio > {HIGH_DEMAND_RATIO}")
 
-    tab_options = ["Overview", "Current vs historical", "Zone explorer", "Unusual zones"]
-    active_tab = (
-        st.segmented_control("Navigation", tab_options, default="Overview", label_visibility="collapsed")
-        if hasattr(st, "segmented_control")
-        else st.radio("Navigation", tab_options, horizontal=True, label_visibility="collapsed")
+    tab_overview, tab_comparison, tab_explorer, tab_unusual = st.tabs(
+        ["Overview", "Current vs historical", "Zone explorer", "Unusual zones"],
+        on_change="rerun",
+        key="main_dashboard_tabs",
     )
-    if not active_tab:
-        active_tab = "Overview"
 
-    if active_tab == "Overview":
-        st.subheader("New York taxi-zone demand")
-        deck = get_cached_nyc_map(latest, tuple(selected_ids))
-        st.pydeck_chart(deck, width=1200, height=520)
-        st.caption(
-            "TLC taxi-zone polygons. Red = high demand (ratio > 1.5), gold ≈ history, "
-            "teal = below history, grey = no live Gold row."
-        )
-        st.altair_chart(current_activity_chart(latest), width=1200)
-        show_table(latest, "Overview zones")
-    elif active_tab == "Current vs historical":
-        st.subheader("Current trips vs historical mean")
-        if filtered.empty:
-            st.info("No rows in the current filters.")
-        elif chart_mode_for(filtered) == "grouped":
-            st.caption("One time window in this slice, so this is a grouped bar — not a trend line.")
-            st.altair_chart(grouped_comparison_chart(latest), width=1200)
-        else:
-            st.altair_chart(line_comparison_chart(filtered, "zone_label"), width=1200)
-        show_table(filtered, "Comparison slice")
-    elif active_tab == "Zone explorer":
-        zone = st.selectbox("Zone", selected_labels or [f"{z} — {id_to_name[z]}" for z in zone_ids], key="explorer_zone_select")
-        zone_rows = filtered[filtered.zone_label == zone]
-        if zone_rows.empty:
-            st.info("No rows for this zone.")
-        else:
-            row = zone_rows.iloc[-1]
-            m1, m2, m3 = st.columns(3)
-            m1.metric("Current trips", int(row.current_trip_count))
-            m2.metric("Historical mean", float(row.historical_mean_trip_count) if pd.notna(row.historical_mean_trip_count) else "—")
-            m3.metric("Demand ratio", float(row.demand_ratio) if pd.notna(row.demand_ratio) else "—")
-            if chart_mode_for(zone_rows) == "grouped":
-                st.caption("Only one window — bars compare this zone to history. A line needs two or more windows.")
-                st.altair_chart(grouped_comparison_chart(zone_rows), width=1200)
+    if tab_overview.open:
+        with tab_overview:
+            st.subheader("New York taxi-zone demand")
+            deck = get_cached_nyc_map(latest, tuple(selected_ids))
+            st.pydeck_chart(deck, width=1200, height=520)
+            st.caption(
+                "TLC taxi-zone polygons. Red = high demand (ratio > 1.5), gold ≈ history, "
+                "teal = below history, grey = no live Gold row."
+            )
+            st.altair_chart(current_activity_chart(latest), width=1200)
+            show_table(latest, "Overview zones")
+
+    elif tab_comparison.open:
+        with tab_comparison:
+            st.subheader("Current trips vs historical mean")
+            if filtered.empty:
+                st.info("No rows in the current filters.")
+            elif chart_mode_for(filtered) == "grouped":
+                st.caption("One time window in this slice, so this is a grouped bar — not a trend line.")
+                st.altair_chart(grouped_comparison_chart(latest), width=1200)
             else:
-                st.altair_chart(line_comparison_chart(zone_rows, "zone_label"), width=1200)
-            show_table(zone_rows, f"Rows for {zone}")
-    elif active_tab == "Unusual zones":
-        ranked = latest.sort_values("demand_ratio", ascending=False, na_position="last")
-        st.caption(
-            f"High demand is demand_ratio > {HIGH_DEMAND_RATIO}. "
-            "Rows without a usable historical mean stay visible and rank last."
-        )
-        plot = ranked.dropna(subset=["demand_ratio"])
-        if plot.empty:
-            st.info("No demand-ratio values to rank.")
-        else:
-            st.altair_chart(demand_chart(plot), width=1200)
-        show_table(ranked, "Ranked unusual zones")
+                if len(selected_ids) > 5:
+                    st.caption(
+                        f"Aggregating total demand across all {len(selected_ids)} selected zones over time. "
+                        "(Select ≤ 5 zones in the sidebar to view individual zone lines)."
+                    )
+                    agg = (
+                        filtered.groupby(["window_start_local"], as_index=False)
+                        .agg({"current_trip_count": "sum", "historical_mean_trip_count": "sum"})
+                    )
+                    agg["zone_label"] = "Total (All Selected Zones)"
+                    st.altair_chart(line_comparison_chart(agg, "zone_label"), width=1200)
+                else:
+                    st.altair_chart(line_comparison_chart(filtered, "zone_label"), width=1200)
+            show_table(filtered, "Comparison slice")
+
+    elif tab_explorer.open:
+        with tab_explorer:
+            zone = st.selectbox(
+                "Zone",
+                selected_labels or [f"{z} — {id_to_name[z]}" for z in zone_ids],
+                key="explorer_zone_select",
+            )
+            zone_rows = filtered[filtered.zone_label == zone]
+            if zone_rows.empty:
+                st.info("No rows for this zone.")
+            else:
+                row = zone_rows.iloc[-1]
+                m1, m2, m3 = st.columns(3)
+                m1.metric("Current trips", int(row.current_trip_count))
+                m2.metric(
+                    "Historical mean",
+                    float(row.historical_mean_trip_count)
+                    if pd.notna(row.historical_mean_trip_count)
+                    else "—",
+                )
+                m3.metric(
+                    "Demand ratio",
+                    float(row.demand_ratio) if pd.notna(row.demand_ratio) else "—",
+                )
+                if chart_mode_for(zone_rows) == "grouped":
+                    st.caption("Only one window — bars compare this zone to history. A line needs two or more windows.")
+                    st.altair_chart(grouped_comparison_chart(zone_rows), width=1200)
+                else:
+                    st.altair_chart(line_comparison_chart(zone_rows, "zone_label"), width=1200)
+                show_table(zone_rows, f"Rows for {zone}")
+
+    elif tab_unusual.open:
+        with tab_unusual:
+            ranked = latest.sort_values("demand_ratio", ascending=False, na_position="last")
+            st.caption(
+                f"High demand is demand_ratio > {HIGH_DEMAND_RATIO}. "
+                "Rows without a usable historical mean stay visible and rank last."
+            )
+            plot = ranked.dropna(subset=["demand_ratio"])
+            if plot.empty:
+                st.info("No demand-ratio values to rank.")
+            else:
+                st.altair_chart(demand_chart(plot), width=1200)
+            show_table(ranked, "Ranked unusual zones")
 
 
 live_dashboard()
 
-with st.expander("Historical baseline", expanded=False):
-    hist = historical[historical.pickup_zone_id.isin(selected_ids)] if selected_ids else historical
-    named = lookup.loc[:, ["pickup_zone_id", "zone_name"]]
-    hist = hist.merge(named, on="pickup_zone_id", how="left")
-    st.dataframe(hist, width=1200, hide_index=True)
+hist_expander = st.expander("Historical baseline", expanded=False, on_change="rerun", key="hist_baseline_expander")
+if hist_expander.open:
+    with hist_expander:
+        hist = historical[historical.pickup_zone_id.isin(selected_ids)] if selected_ids else historical
+        named = lookup.loc[:, ["pickup_zone_id", "zone_name"]]
+        hist = hist.merge(named, on="pickup_zone_id", how="left")
+        count = len(hist)
+        if count > 500:
+            st.caption(f"Showing first 500 of {count:,} historical baseline rows to keep rendering fast.")
+            st.dataframe(hist.head(500), width=1200, hide_index=True)
+        else:
+            st.dataframe(hist, width=1200, hide_index=True)
 
 

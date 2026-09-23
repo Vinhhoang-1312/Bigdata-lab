@@ -216,6 +216,7 @@ derby.log
 checkpoints/
 .checkpoints/
 **/.checkpoints/
+.telemetry/
 local-data/
 urbanflow-batch/output/
 urbanflow-batch/.local/

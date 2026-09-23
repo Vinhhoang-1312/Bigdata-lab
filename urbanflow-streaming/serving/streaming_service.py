@@ -1,12 +1,18 @@
-"""Read-only status models built from Streaming Gold outputs."""
+"""Read-only status models built from Streaming Gold outputs and Spark telemetry."""
 from __future__ import annotations
 
+import os
 from datetime import datetime, timezone
 from typing import Any
 
 import pandas as pd
 
 from analytics_app.data_access import GoldReader, prepare_live_view
+from observability.governance import build_data_governance_report
+from observability.health_state import classify_health
+from observability.kafka_backlog import build_kafka_backlog_report
+from observability.telemetry_reader import telemetry_age_seconds
+from observability.watermark import build_watermark_status
 
 
 def _iso(value: pd.Timestamp) -> str:
@@ -42,26 +48,94 @@ def build_streaming_health(
     telemetry: dict[str, Any] | None,
     now: datetime,
 ) -> dict[str, Any]:
-    """Report freshness and optional telemetry while preserving unknown states."""
+    """Construct full Glass Cockpit health contract while preserving backwards compatibility."""
     if now.tzinfo is None or now.utcoffset() is None:
         raise ValueError("now must include a timezone")
+
+    # Read live gold
     live = reader.live()
     if live.empty:
-        return {
-            "status": "empty",
-            "latest_window_end": None,
-            "live_gold_age_seconds": None,
-            "live_gold_row_count": 0,
-            "telemetry_status": "unavailable" if telemetry is None else "available",
-            "invalid_record_count": None if telemetry is None else telemetry.get("invalid_record_count"),
+        latest_end_iso = None
+        age_seconds = None
+        row_count = 0
+    else:
+        latest_end = live["window_end"].max()
+        latest_end_iso = _iso(latest_end)
+        age_seconds = max(0, int((pd.Timestamp(now).tz_convert("UTC") - latest_end).total_seconds()))
+        row_count = int(len(live))
+
+    # Health classification
+    health = classify_health(telemetry, age_seconds, now)
+    state = health["state"]
+    reason = health["reason"]
+
+    # Pipeline configuration metadata
+    pipeline_meta = {
+        "engine": "Apache Spark Structured Streaming",
+        "version": "4.2.0",
+        "master": "local[2]",
+        "execution_mode": "local driver execution (local[2])",
+        "cluster_topology": (
+            "Standalone cluster (master:8080, workers:8081/8082) is idle infrastructure; "
+            "streaming query executes locally on driver (port 4040)"
+        ),
+        "session_timezone": "America/New_York",
+        "window_duration": os.getenv("URBANFLOW_WINDOW_DURATION", "5 minutes"),
+        "slide_duration": os.getenv("URBANFLOW_SLIDE_DURATION", "1 minute"),
+        "watermark_delay": os.getenv("URBANFLOW_WATERMARK_DELAY", "10 minutes"),
+    }
+
+    # Spark telemetry
+    spark_telemetry = None
+    if telemetry:
+        tel_age = telemetry_age_seconds(telemetry, now)
+        spark_telemetry = {
+            "query_active": telemetry.get("query_active", False),
+            "batch_id": telemetry.get("batch_id", -1),
+            "input_rows_per_second": telemetry.get("input_rows_per_second", 0.0),
+            "processed_rows_per_second": telemetry.get("processed_rows_per_second", 0.0),
+            "num_input_rows": telemetry.get("num_input_rows", 0),
+            "batch_duration_ms": telemetry.get("batch_duration_ms", 0),
+            "trigger_interval_ms": telemetry.get("trigger_interval_ms", 5000),
+            "trigger_load": health["trigger_load"],
+            "throughput_ratio": health["throughput_ratio"],
+            "telemetry_age_seconds": tel_age,
         }
-    latest_end = live["window_end"].max()
-    age_seconds = max(0, int((pd.Timestamp(now).tz_convert("UTC") - latest_end).total_seconds()))
+
+    # Watermark status
+    watermark_status = build_watermark_status(
+        telemetry, configured_delay=pipeline_meta["watermark_delay"]
+    )
+
+    # Kafka backlog
+    kafka_backlog = build_kafka_backlog_report(
+        telemetry, topic=os.getenv("URBANFLOW_KAFKA_TOPIC", "urbanflow.trip-events")
+    )
+
+    # Data governance
+    data_governance = build_data_governance_report(telemetry)
+
+    # Live Gold freshness section
+    live_gold_freshness = {
+        "latest_window_end": latest_end_iso,
+        "age_seconds": age_seconds,
+        "row_count": row_count,
+    }
+
+    # Return full contract including backwards-compatible fields
     return {
-        "status": "degraded" if age_seconds > 300 else "available",
-        "latest_window_end": _iso(latest_end),
-        "live_gold_age_seconds": age_seconds,
-        "live_gold_row_count": int(len(live)),
+        "status": state,
+        "reason": reason,
+        "pipeline": pipeline_meta,
+        "spark_telemetry": spark_telemetry,
+        "watermark_status": watermark_status,
+        "kafka_backlog": kafka_backlog,
+        "data_governance": data_governance,
+        "live_gold_freshness": live_gold_freshness,
+        # Backwards-compatible legacy fields
         "telemetry_status": "unavailable" if telemetry is None else "available",
-        "invalid_record_count": None if telemetry is None else telemetry.get("invalid_record_count"),
+        "invalid_record_count": None if telemetry is None else telemetry.get("invalid_events_total"),
+        "live_gold_age_seconds": age_seconds,
+        "latest_window_end": latest_end_iso,
+        "live_gold_row_count": row_count,
     }

@@ -292,6 +292,8 @@ services:
       - --conf
       - spark.hadoop.fs.s3a.connection.ssl.enabled=false
     command: ["--master", "local[2]", "/workspace/tests/infrastructure/spark_s3a_smoke.py"]
+    ports:
+      - "4040:4040"
     mem_limit: 3g
     cpus: 2.0
     profiles: ["tools"]

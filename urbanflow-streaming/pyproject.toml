@@ -20,7 +20,7 @@ testpaths = ["tests"]
 pythonpath = ["."]
 
 [tool.setuptools.packages.find]
-include = ["analytics_app*", "spark*"]
+include = ["analytics_app*", "spark*", "serving*", "observability*"]
 exclude = ["config*", "output*", "tests*"]
 
 [tool.ruff]
