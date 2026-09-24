@@ -1,5 +1,37 @@
 # UrbanFlow — Big Data Analytics Demo
 
+## React UI (Streaming and ML)
+
+Start Docker Desktop, then from the repository root:
+
+```powershell
+docker compose up -d seaweedfs spark-master spark-worker-1 spark-worker-2 streaming-api ml-api
+cd urbanflow-ui
+npm ci --cache D:\UrbanFlow-npm-cache
+npm run dev
+```
+
+In another terminal, open `http://127.0.0.1:5173/streaming` and
+`http://127.0.0.1:5173/ml`. Streaming has Dispatch and Reliability views;
+ML has Forecast and Evidence views. The current Gold is a February 2023 replay,
+not current city traffic. ML inference is experimental: raw held-out WAPE is
+69.1% error, while the final baseline comparison is incomplete. Pages read on
+entry or when Refresh is clicked, not on a timer.
+
+## Legacy Streamlit quick start
+
+Start Docker Desktop, then run these commands from the project root:
+
+```powershell
+docker-compose up -d seaweedfs spark-master spark-worker-1 spark-worker-2
+docker start urbanflow-streamlit
+Start-Process http://127.0.0.1:8501
+Start-Process http://127.0.0.1:8080
+```
+
+- `http://127.0.0.1:8501` — Streaming analytics UI.
+- `http://127.0.0.1:8080` — Spark distributed-runtime UI (not the ML prediction UI).
+
 A teaching demo of one full Big Data pipeline, built on public
 [**NYC TLC taxi-trip records (https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page)**](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page).
 

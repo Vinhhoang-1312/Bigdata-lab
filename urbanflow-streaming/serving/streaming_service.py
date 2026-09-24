@@ -13,11 +13,18 @@ def _iso(value: pd.Timestamp) -> str:
     return value.to_pydatetime().astimezone(timezone.utc).isoformat()
 
 
-def build_streaming_overview(reader: GoldReader, lookup: pd.DataFrame) -> dict[str, Any]:
+def build_streaming_overview(
+    reader: GoldReader, lookup: pd.DataFrame, now: datetime | None = None,
+    live: pd.DataFrame | None = None,
+) -> dict[str, Any]:
     """Summarize the latest completed Live Gold window without reproducing ETL."""
-    view = prepare_live_view(reader.live(), lookup)
+    view = prepare_live_view(reader.live() if live is None else live, lookup)
     if view.empty:
-        return {"status": "empty", "latest_window": None, "latest_rows": [], "current_trip_count": 0}
+        return {
+            "status": "empty", "source_mode": "unknown", "timezone": "America/New_York",
+            "window_minutes": 5, "latest_window": None, "latest_rows": [],
+            "current_trip_count": 0, "high_demand_zone_count": 0,
+        }
     latest = view[view["window_start"] == view["window_start"].max()].copy()
     columns = [
         "pickup_zone_id",
@@ -28,12 +35,21 @@ def build_streaming_overview(reader: GoldReader, lookup: pd.DataFrame) -> dict[s
         "z_score",
         "is_high_demand",
     ]
+    current_time = now or datetime.now(timezone.utc)
+    age_seconds = (pd.Timestamp(current_time) - latest["window_end"].max()).total_seconds()
+    rows = latest.loc[:, columns].sort_values(
+        ["current_trip_count", "pickup_zone_id"], ascending=[False, True]
+    )
+    rows = rows.astype(object).where(pd.notna(rows), None)
     return {
         "status": "available",
+        "source_mode": "historical_replay" if age_seconds > 86400 else "live",
+        "timezone": "America/New_York",
+        "window_minutes": 5,
         "latest_window": _iso(latest["window_start"].iloc[0]),
         "current_trip_count": int(latest["current_trip_count"].sum()),
         "high_demand_zone_count": int(latest["is_high_demand"].sum()),
-        "latest_rows": latest.loc[:, columns].sort_values("demand_ratio", ascending=False).to_dict("records"),
+        "latest_rows": rows.to_dict("records"),
     }
 
 
@@ -41,11 +57,12 @@ def build_streaming_health(
     reader: GoldReader,
     telemetry: dict[str, Any] | None,
     now: datetime,
+    live: pd.DataFrame | None = None,
 ) -> dict[str, Any]:
     """Report freshness and optional telemetry while preserving unknown states."""
     if now.tzinfo is None or now.utcoffset() is None:
         raise ValueError("now must include a timezone")
-    live = reader.live()
+    live = reader.live() if live is None else live
     if live.empty:
         return {
             "status": "empty",

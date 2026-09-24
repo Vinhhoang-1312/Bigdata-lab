@@ -43,6 +43,9 @@ htmlcov/
 .coverage
 .coverage.*
 .cache
+node_modules/
+.npm-cache/
+*.tsbuildinfo
 .pip-cache/
 .tmp/
 nosetests.xml

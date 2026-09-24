@@ -208,6 +208,57 @@ services:
     mem_limit: 2g
     cpus: 2.0
 
+  streaming-api:
+    image: *spark-image
+    working_dir: /workspace/urbanflow-streaming
+    entrypoint: ["/usr/bin/python3", "-m", "uvicorn"]
+    command: ["serving.app:app", "--host", "0.0.0.0", "--port", "8001"]
+    restart: unless-stopped
+    depends_on:
+      seaweedfs:
+        condition: service_healthy
+    environment:
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:?Copy .env.example to .env}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:?Copy .env.example to .env}
+      AWS_REGION: us-east-1
+      PYTHONPATH: /workspace/urbanflow-streaming
+      URBANFLOW_S3_ENDPOINT: http://seaweedfs:8333
+      URBANFLOW_HISTORICAL_PATH: s3a://urbanflow/gold/historical_zone_baseline/
+      URBANFLOW_LIVE_PATH: s3a://urbanflow/gold/live_zone_metrics/task6/stream_health_20260920_001/
+      URBANFLOW_ZONE_LOOKUP_PATH: s3a://urbanflow/bronze/zone_lookup/taxi_zone_lookup.csv
+    ports:
+      - "127.0.0.1:8001:8001"
+    volumes:
+      - ./:/workspace:ro
+    networks:
+      - urbanflow
+    mem_limit: 640m
+
+  ml-api:
+    image: *spark-image
+    working_dir: /workspace/urbanflow-ml
+    entrypoint: ["/usr/bin/python3", "-m", "uvicorn"]
+    command: ["ml_serving.app:app", "--host", "0.0.0.0", "--port", "8002"]
+    restart: unless-stopped
+    depends_on:
+      seaweedfs:
+        condition: service_healthy
+    environment:
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:?Copy .env.example to .env}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:?Copy .env.example to .env}
+      AWS_REGION: us-east-1
+      PYTHONPATH: /workspace/urbanflow-ml
+      URBANFLOW_S3_ENDPOINT: http://seaweedfs:8333
+      URBANFLOW_ML_CONFIG: /workspace/urbanflow-ml/config/settings.example.yaml
+      URBANFLOW_ML_RUN_ID: gtqn-20260917-001
+    ports:
+      - "127.0.0.1:8002:8002"
+    volumes:
+      - ./:/workspace:ro
+    networks:
+      - urbanflow
+    mem_limit: 1536m
+
   spark-submit:
     image: *spark-image
     build: *spark-build

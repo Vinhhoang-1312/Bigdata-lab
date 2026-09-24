@@ -1,5 +1,17 @@
 # UrbanFlow ML: Du Bao Nhu Cau Taxi Theo Zone
 
+## React forecast workspace
+
+The experimental forecast and evidence UI is `http://127.0.0.1:5173/ml`
+after starting `ml-api` and Vite (root README). It loads verified GTQN weights
+from SeaweedFS and supports 30-minute buckets in the February 2023 held-out
+period. The raw test report has WAPE 69.1% error, MAE 5.61 trips and P10-P90
+coverage 90.2%; this is not 69.1% classification accuracy or a final benchmark.
+
+`best.pt` says `epoch=10` because training ended then, but its restored model
+weights match `stopper.best_state` from best validation epoch 2. The serving API
+checks this and displays the best-weights epoch separately.
+
 `urbanflow-ml` la phan thi nghiem Machine Learning cua UrbanFlow. Muc tieu la
 du bao so luot taxi don tai tung NYC Taxi Zone trong **30 phut ke tiep**, dung
 du lieu chuyen di da duoc lam sach o Silver va huan luyen phan tan bang Spark.

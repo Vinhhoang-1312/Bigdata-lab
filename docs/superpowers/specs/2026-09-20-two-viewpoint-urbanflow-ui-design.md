@@ -33,8 +33,7 @@ spatiotemporal demand forecasting model, not a general chatbot or image model.
 - Do not claim a production city-wide forecast before the held-out test is run.
 - Do not accept arbitrary images as an input to GTQN. There is no training data
   or model component that makes image understanding scientifically valid.
-- Do not build a general conversational agent, RAG system, or a separate React
-  frontend for this version.
+- Do not build a general conversational agent or RAG system.
 
 ## Architecture
 
@@ -43,32 +42,35 @@ flowchart LR
     LG[Live Gold Parquet] --> SA[Streaming API]
     HG[Historical Gold Parquet] --> SA
     KH[Kafka and Spark health] --> SA
-    SA --> SUI[Streaming Streamlit UI]
+    SA --> SUI[React Streaming workspace]
 
     TA[GTQN tensor artifact] --> MA[Forecast API]
     CP[Best GTQN checkpoint] --> MA
     ER[Evaluation report] --> MA
-    MA --> MUI[ML Streamlit UI]
+    MA --> MUI[React ML workspace]
 ```
 
 `FastAPI` is the thin serving boundary. It validates requests and returns
 typed, JSON-safe results. It does not transform Silver data or run training.
-`Streamlit` renders each role-specific interface. The current Streaming UI is
-refactored rather than replaced. The ML UI is a new application because it
-serves a distinct artifact and user journey.
+React renders two distinct workspaces, Streaming and ML, each with two
+role-specific viewpoints. The existing Streamlit app remains a legacy
+diagnostic during migration but is not the primary experience.
 
 The selected libraries are open source and fit the current Python project:
 
 - FastAPI: typed, high-performance Python API with a mature ecosystem.
-- Streamlit: existing local UI framework, appropriate for a teaching and
-  operational data product.
-- Pydeck/deck.gl: the current map layer and an established open-source choice
-  for interactive geospatial rendering.
-- Altair: existing declarative charting layer for accessible charts.
+- React and Vite: predictable client state and a buildable local frontend.
+- Ant Design: compact operational controls and tables.
+- MapLibre GL JS: open-source interactive map without a proprietary token.
+- Apache ECharts: responsive charts with controlled labels and axes.
 
-No package is selected because of popularity alone. Adding React, a hosted LLM,
-or an image classifier would increase surface area without producing a valid
-answer from the current taxi dataset.
+No package is selected because of popularity alone. The UI migration is driven
+by observed Streamlit layout failures, rerenders, and the need for stable
+role-specific workflows. A hosted LLM or image classifier would not produce
+a valid answer from this taxi dataset. Historical replay must show its actual
+2023 window and never present itself as live 2026 data. Fetch data on page
+entry or explicit Refresh, not automatic polling; cached data retains its
+timestamp and source label.
 
 ## Streaming UI
 
@@ -79,7 +81,8 @@ Question: "Where is live pickup demand unusual right now?"
 - Full operational map of the latest Live Gold window.
 - Clear high-demand and below-baseline zone colors.
 - Top-zone list, current trips, historical mean, demand ratio, and window time.
-- Zone selector and date/window filtering for investigation.
+- Zone selector and latest-window comparison for investigation; historical
+  exploration is added only with a bounded time-query API.
 - No infrastructure jargon in the primary surface.
 
 ### Reliability Viewpoint
@@ -99,10 +102,8 @@ Question: "Can I trust the live view right now?"
 
 Question: "How busy will pickup Zone Z be at time T?"
 
-- Plain-language question field with deterministic parsing for zone number,
-  known zone name, and an explicit timestamp.
-- Map-first zone selection and date/time controls are always available as a
-  precise alternative to language parsing.
+- Explicit zone and date/time controls are the primary input. A natural-language
+  question is optional and must not imply chatbot or image understanding.
 - Response contains P50 forecast, P10-P90 interval, demand category, selected
   zone/time, model run identifier, and a short uncertainty explanation.
 - Invalid, ambiguous, out-of-range, and unavailable-model requests produce
@@ -113,7 +114,9 @@ Question: "How busy will pickup Zone Z be at time T?"
 Question: "What proves this forecast model is useful and what are its limits?"
 
 - Current model/version and artifact fingerprint.
-- Final held-out test metrics only after the test evaluation is complete.
+- Held-out metrics with their exact evaluation stage: the existing raw February
+  report is preliminary because same-key baselines, checkpoint reselection,
+  and calibration required by `plan.md` are not complete.
 - Seasonal-naive and Spark MLlib GBT comparisons on identical test keys.
 - Interval coverage, calibration status, and a compact anomaly-candidate table.
 - Data-coverage limitations and an explicit status when final evaluation is not
@@ -127,6 +130,7 @@ The new APIs are application-local and versioned under `/v1`.
 | --- | --- | --- | --- |
 | `GET /v1/streaming/overview` | Dispatcher | Live and Historical Gold | Read-only summary |
 | `GET /v1/streaming/health` | Reliability | Spark/Kafka telemetry + Gold freshness | Read-only status |
+| `GET /v1/streaming/zones` | Dispatcher | Taxi-zone GeoJSON | Static map geometry |
 | `POST /v1/forecast` | Planner | GTQN checkpoint + tensor artifact | `{zone_id, forecast_at}` -> quantiles |
 | `GET /v1/forecast/evidence` | Evidence | final evaluation artifact | Read-only metrics/status |
 
@@ -151,7 +155,7 @@ the host timezone.
 | No Live Gold output | Explain that the stream has not produced a window. |
 | Gold schema mismatch | Fail visibly; never silently drop columns. |
 | Stale Live Gold | Show last-update age and degraded status. |
-| No final ML evaluation | Show the forecast model status but withhold final-quality claims. |
+| Incomplete ML benchmark | Show raw test metrics as preliminary; withhold final-quality claims. |
 | Missing checkpoint/artifact | Disable prediction and show the failed dependency. |
 | Ambiguous question | Ask the user to select zone/time; do not guess. |
 | Unsupported image upload | Do not expose it in V1. |
@@ -184,8 +188,8 @@ the host timezone.
 
 1. Finish and evaluate the current distributed GTQN training run.
 2. Add the application-local FastAPI serving boundary with fixtures/tests.
-3. Refactor the existing Streaming Streamlit app into the two viewpoints.
-4. Add the ML Streamlit app and planner/evidence viewpoints.
+3. Build a React Streaming workspace with two viewpoints, preserving the Streamlit diagnostic.
+4. Build a React ML workspace with planner/evidence viewpoints.
 5. Audit API, contracts, and browser behavior with Playwright before human
    review.
 

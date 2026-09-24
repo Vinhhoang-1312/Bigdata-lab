@@ -49,3 +49,45 @@ class StreamingServiceTest(unittest.TestCase):
         app = create_app()
 
         self.assertEqual("UrbanFlow Streaming API", app.title)
+
+    def test_overview_identifies_replay_and_serializes_missing_baseline(self):
+        from analytics_app.data_access import GoldReader
+        from analytics_app.zones import load_zone_lookup
+        from serving.streaming_service import build_streaming_overview
+
+        reader = GoldReader(
+            str(FOUNDATION / "gold" / "historical_zone_baseline.jsonl"),
+            str(FOUNDATION / "gold" / "expected_live_zone_metrics.jsonl"),
+        )
+        lookup = load_zone_lookup(str(FOUNDATION / "bronze" / "zone_lookup.csv"))
+        overview = build_streaming_overview(reader, lookup)
+
+        self.assertEqual("historical_replay", overview["source_mode"])
+        self.assertEqual(5, overview["window_minutes"])
+        self.assertEqual("America/New_York", overview["timezone"])
+        self.assertTrue(overview["latest_window"].endswith("+00:00"))
+        import json
+        json.dumps(overview, allow_nan=False)
+
+    def test_zone_geometry_route_is_exposed(self):
+        from serving.app import create_app
+
+        routes = {route.path for route in create_app().routes}
+        self.assertIn("/v1/streaming/zones", routes)
+
+    def test_live_gold_reads_are_coalesced_until_refresh_or_expiry(self):
+        from serving.app import read_live_snapshot
+
+        class FakeReader:
+            live_path = "fixture://serving-cache-test"
+            calls = 0
+
+            def live(self):
+                self.calls += 1
+                return {"version": self.calls}
+
+        reader = FakeReader()
+        self.assertEqual(1, read_live_snapshot(reader, at=100)["version"])
+        self.assertEqual(1, read_live_snapshot(reader, at=101)["version"])
+        self.assertEqual(2, read_live_snapshot(reader, refresh=True, at=102)["version"])
+        self.assertEqual(3, read_live_snapshot(reader, at=163)["version"])

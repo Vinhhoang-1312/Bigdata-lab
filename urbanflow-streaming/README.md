@@ -125,7 +125,11 @@ Do not delete the checkpoint between restarts, reuse it for another query, or
 place it inside Gold. The historical loader automatically reads fixture JSONL
 or integrated Parquet and validates the Foundation schema in both modes.
 
-## Streamlit analytics
+## React UI and legacy Streamlit analytics
+
+The primary Streaming workspace is `http://127.0.0.1:5173/streaming` after
+starting `streaming-api` and Vite as described in the root README. Streamlit is
+retained as a diagnostic comparison, not the primary interface.
 
 Fixture data is the default:
 
@@ -153,7 +157,10 @@ streamlit run analytics_app/app.py
 The app includes overview KPIs, current-versus-historical charts, zone/date
 filters, a zone explorer, unusual-zone ranking, and Live/Historical tables.
 It does not auto-refresh the page: a browser refresh is the explicit action
-that reads a new Gold snapshot.
+that reads a new Gold snapshot. The first view selects at most 12 active zones
+from the latest global window so charts and controls remain readable. Historical
+Gold is not sent to the browser until **Load historical sample** is selected;
+the displayed sample is capped at 1,000 matching rows.
 
 ## Read-only Streaming API
 
