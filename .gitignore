@@ -224,12 +224,12 @@ urbanflow-replay/output/
 urbanflow-streaming/output/
 urbanflow-ml/output/
 
-# Converted TLC shapefile (runtime map uses taxi_zones.geojson)
+# Converted TLC shapefile directory (runtime map uses data/taxi_zones.geojson)
 urbanflow-streaming/analytics_app/data/taxi_zones_shp/
 
 # Local machine config — keep *.example.yaml tracked
 **/config/settings.yaml
-!**/config/settings.example.yaml
+!**/config/*.example.yaml
 
 # Cursor / agent local files (not part of the demo)
 .cursor/

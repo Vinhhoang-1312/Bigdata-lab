@@ -83,7 +83,7 @@ Sidebar navigation links with accurate port descriptors:
 
 ## One-Command Demo Lifecycle (`make demo`)
 
-UrbanFlow features an automated One-Command Demo orchestration for continuous ingestion, virtual time replay, streaming sliding-window aggregations, and the Glass Cockpit observability plane.
+UrbanFlow features an automated One-Command Demo orchestration for continuous ingestion, virtual time replay, streaming tumbling-window aggregations, and the Glass Cockpit observability plane.
 
 Primary control commands:
 

@@ -12,6 +12,7 @@ import streamlit as st
 try:
     from .data_access import (
         HIGH_DEMAND_RATIO,
+        LIVE_COLUMNS,
         GoldReader,
         chart_mode_for,
         prepare_live_view,
@@ -22,6 +23,7 @@ try:
 except ImportError:
     from data_access import (
         HIGH_DEMAND_RATIO,
+        LIVE_COLUMNS,
         GoldReader,
         chart_mode_for,
         prepare_live_view,

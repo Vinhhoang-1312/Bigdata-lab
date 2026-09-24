@@ -41,15 +41,14 @@ def aggregate_current(
     window_duration: str = "5 minutes",
     slide_duration: str | None = None,
 ) -> DataFrame:
-    """Count pickups in clock-aligned event-time tumbling or sliding windows."""
-    window_spec = (
-        F.window("event_timestamp", window_duration, slide_duration)
-        if slide_duration
-        else F.window("event_timestamp", window_duration)
-    )
+    """Count pickups in clock-aligned event-time tumbling windows."""
+    if slide_duration:
+        raise ValueError(
+            f"Foundation 1.0.0 requires 5-minute tumbling windows; slide_duration '{slide_duration}' is not allowed"
+        )
     return (
         events.withWatermark("event_timestamp", watermark)
-        .groupBy(window_spec, "pickup_zone_id")
+        .groupBy(F.window("event_timestamp", window_duration), "pickup_zone_id")
         .agg(F.count(F.lit(1)).cast("long").alias("current_trip_count"))
         .select(
             F.col("window.start").alias("window_start"),
@@ -184,9 +183,18 @@ def _settings(path: str) -> dict:
         return yaml.safe_load(stream)
 
 
+def _default_config() -> str:
+    config_dir = Path(__file__).resolve().parents[1] / "config"
+    for name in ("settings.yaml", "settings.integrated.yaml", "settings.example.yaml"):
+        candidate = config_dir / name
+        if candidate.is_file():
+            return str(candidate)
+    return str(config_dir / "settings.integrated.yaml")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", default=str(Path(__file__).parents[1] / "config/settings.yaml"))
+    parser.add_argument("--config", default=_default_config())
     parser.add_argument("--fixture-events", help="Run a deterministic available-now file stream")
     parser.add_argument(
         "--available-now", action="store_true", help="Run a finite available-now stream"
@@ -207,12 +215,15 @@ def main() -> None:
     watermark = streaming_cfg.get("watermark", DEFAULT_WATERMARK)
     window_duration = streaming_cfg.get("window_duration", "5 minutes")
     slide_duration = streaming_cfg.get("slide_duration")
+    if slide_duration:
+        raise ValueError(
+            f"Foundation 1.0.0 requires 5-minute tumbling windows; slide_duration '{slide_duration}' is not allowed"
+        )
     gold, invalid = transform(
         source,
         historical,
         watermark=watermark,
         window_duration=window_duration,
-        slide_duration=slide_duration,
     )
     available_now = bool(args.fixture_events or args.available_now)
     validate_runtime_paths(cfg["storage"]["live_metrics"], cfg["storage"]["streaming_checkpoint"])

@@ -319,11 +319,9 @@ Working tree at snapshot time:
 ?? urbanflow-streaming/docs/
 ```
 
-That untracked folder contains one plan:
-
-```text
-urbanflow-streaming/docs/plans/2026-09-12-replace-streamlit-fastapi-frontend.md
-```
+Note: An earlier tentative proposal to replace Streamlit entirely was superseded by the
+hybrid Glass Cockpit architecture (FastAPI observability service on port 8000 alongside
+the Streamlit analytics dashboard on port 8501).
 
 ## Available Documentation
 

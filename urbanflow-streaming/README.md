@@ -152,8 +152,9 @@ streamlit run analytics_app/app.py
 
 The app includes overview KPIs, current-versus-historical charts, zone/date
 filters, a zone explorer, unusual-zone ranking, and Live/Historical tables.
-It does not auto-refresh the page: a browser refresh is the explicit action
-that reads a new Gold snapshot.
+The live dashboard section automatically refreshes every 10 seconds via Streamlit
+fragments (configurable via sidebar toggle), allowing continuous streaming
+monitoring without full page reloads.
 
 ## Read-only Streaming API
 

@@ -9,9 +9,9 @@ requires-python = ">=3.11"
 dependencies = ["PyYAML>=6.0"]
 
 [project.optional-dependencies]
-offline = ["pyspark>=3.5,<4.3", "pytest>=8", "pandas>=2.2,<3", "pyarrow>=17"]
+offline = ["pyspark>=3.5,<4.3", "pytest>=8", "pandas>=2.2,<3", "pyarrow>=17,<26"]
 streaming = ["pyspark>=3.5,<4.3"]
-analytics = ["streamlit>=1.40", "pandas>=2.2,<3", "pyarrow>=17", "s3fs>=2024.9", "pydeck>=0.9", "altair>=5.4"]
+analytics = ["streamlit>=1.40,<1.65", "pandas>=2.2,<3", "pyarrow>=17,<26", "s3fs>=2024.9", "pydeck>=0.9", "altair>=5.4"]
 serving = ["fastapi==0.116.1", "uvicorn==0.35.0"]
 dev = ["pytest>=8", "ruff>=0.7"]
 

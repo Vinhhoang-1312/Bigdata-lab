@@ -18,7 +18,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "urbanflow-replay"))
 
-from producer.event_time import NYC, parse_event_time
+from producer.event_time import NYC
 from producer.input_reader import iter_fixture
 from producer.rate_controller import VirtualClockController
 from producer.replay import rebased_record_stream

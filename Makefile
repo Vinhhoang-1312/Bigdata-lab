@@ -47,7 +47,7 @@ demo: check-prereqs demo-stop
 	@echo "==> 2b. Resetting clean live demo storage and checkpoints..."
 	@curl -s -X DELETE "http://localhost:8888/buckets/urbanflow/gold/live_zone_metrics/live_demo?recursive=true" >/dev/null 2>&1 || true
 	@curl -s -X DELETE "http://localhost:8888/buckets/urbanflow/checkpoints/live_trip_metrics/live_demo?recursive=true" >/dev/null 2>&1 || true
-	@echo "==> 3. Launching Spark Structured Streaming (5-min sliding window / 1-min slide)..."
+	@echo "==> 3. Launching Spark Structured Streaming (5-min tumbling window)..."
 	docker compose run -d -p 4040:4040 --name urbanflow-demo-streaming spark-submit \
 		--master 'local[2]' \
 		/workspace/urbanflow-streaming/spark/live_trip_metrics.py \

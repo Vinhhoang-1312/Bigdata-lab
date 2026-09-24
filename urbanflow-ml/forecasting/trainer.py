@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import copy
 import random
 from contextlib import nullcontext
 from dataclasses import asdict, dataclass

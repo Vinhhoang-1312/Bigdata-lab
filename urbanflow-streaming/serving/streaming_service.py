@@ -80,8 +80,9 @@ def build_streaming_health(
             "streaming query executes locally on driver (port 4040)"
         ),
         "session_timezone": "America/New_York",
+        "window_type": "tumbling",
         "window_duration": os.getenv("URBANFLOW_WINDOW_DURATION", "5 minutes"),
-        "slide_duration": os.getenv("URBANFLOW_SLIDE_DURATION", "1 minute"),
+        "slide_duration": None,
         "watermark_delay": os.getenv("URBANFLOW_WATERMARK_DELAY", "10 minutes"),
     }
 

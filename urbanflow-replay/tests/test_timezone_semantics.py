@@ -16,7 +16,6 @@ import json
 import os
 import re
 from datetime import UTC, datetime
-from zoneinfo import ZoneInfo
 
 from producer.event_mapper import EventMapper
 from producer.event_time import NYC

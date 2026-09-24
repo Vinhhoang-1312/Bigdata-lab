@@ -86,7 +86,7 @@ class ModelTest(unittest.TestCase):
         pipeline = build_pipeline(seed=20260913, params=params)
 
         model = pipeline.fit(frame)
-        predictions = apply_prediction_postprocessing(model.transform(frame))
+        _ = apply_prediction_postprocessing(model.transform(frame))
         with tempfile.TemporaryDirectory() as tmp:
             model.write().overwrite().save(tmp)
             loaded = PipelineModel.load(tmp)

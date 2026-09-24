@@ -20,8 +20,8 @@ The One-Command Demo provides a completely automated, reproducible environment t
 ┌───────────────────────────┐         ┌──────┴─────────┐      │     ┌────────────────────────────┐
 │   Virtual Time Replay     │         │ Spark Streaming│      │     │    Streamlit Dashboard     │
 │   (urbanflow-demo-replay) │         │ (local[2],:4040│      │     │       (Host Port 8501)     │
-│   Rate-controlled 60x     │         │ 5-min sliding  │      │     │  Interactive maps, metrics,│
-│   looping February 2023   │         │ 1-min slide)   │      │     │  HUD Glass Cockpit panel   │
+│   Rate-controlled 60x     │         │ 5-min tumbling │      │     │  Interactive maps, metrics,│
+│   looping February 2023   │         │ window)        │      │     │  HUD Glass Cockpit panel   │
 └─────────────┬─────────────┘         └──────▲─────────┘      │     └─────────────▲──────────────┘
               │                              │                │                   │
          (publishes)                    (consumes)            │                   │
@@ -119,7 +119,7 @@ This single command will:
 3. Bring up SeaweedFS, Kafka, and Spark cluster containers.
 4. Run `bucket-init` to create the `urbanflow` S3 bucket.
 5. Run `kafka-topic-init` to create `urbanflow.trip-events` (4 partitions).
-6. Launch Spark Structured Streaming (`urbanflow-demo-streaming`) with sliding-window aggregations.
+6. Launch Spark Structured Streaming (`urbanflow-demo-streaming`) with tumbling-window aggregations.
 7. Launch the Virtual Time Replay Producer (`urbanflow-demo-replay`) at 60x acceleration with looping enabled.
 8. Start the FastAPI Observability Service on port `8000` as a detached daemon.
 9. Start the Streamlit Analytics Dashboard on port `8501` as a detached daemon.

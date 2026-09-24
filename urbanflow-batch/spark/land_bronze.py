@@ -27,7 +27,6 @@ def copy_local_file(spark: SparkSession, source: Path, destination: str) -> None
         raise FileNotFoundError(source)
     jvm = spark.sparkContext._jvm
     hadoop = spark.sparkContext._jsc.hadoopConfiguration()
-    local_fs = jvm.org.apache.hadoop.fs.FileSystem.getLocal(hadoop)
     destination_path = jvm.org.apache.hadoop.fs.Path(destination)
     destination_fs = destination_path.getFileSystem(hadoop)
     destination_fs.mkdirs(destination_path.getParent())
