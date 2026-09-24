@@ -39,8 +39,31 @@ class StreamingServiceTest(unittest.TestCase):
         health = build_streaming_health(reader, telemetry=None, now=NOW)
 
         self.assertEqual("unavailable", health["telemetry_status"])
+        self.assertEqual("unavailable", health["spark_stream_status"])
+        self.assertEqual(str(FOUNDATION / "gold" / "expected_live_zone_metrics.jsonl"), health["gold_source_uri"])
         self.assertIsNone(health["invalid_record_count"])
         self.assertEqual(300, health["live_gold_age_seconds"])
+
+    def test_spark_master_apps_identify_only_the_streaming_job(self):
+        from serving.spark_status import classify_stream_job
+
+        self.assertEqual("inactive", classify_stream_job({"activeapps": []}))
+        self.assertEqual("inactive", classify_stream_job(
+            {"activeapps": [{"name": "UrbanFlow ML training"}]}))
+        self.assertEqual("active", classify_stream_job(
+            {"activeapps": [{"name": "UrbanFlowLiveMetrics"}]}))
+        self.assertEqual("unavailable", classify_stream_job({"workers": []}))
+
+    def test_health_includes_confirmed_stream_job_status(self):
+        from analytics_app.data_access import GoldReader
+        from serving.streaming_service import build_streaming_health
+
+        reader = GoldReader(
+            str(FOUNDATION / "gold" / "historical_zone_baseline.jsonl"),
+            str(FOUNDATION / "gold" / "expected_live_zone_metrics.jsonl"),
+        )
+        health = build_streaming_health(reader, telemetry=None, now=NOW, spark_stream_status="inactive")
+        self.assertEqual("inactive", health["spark_stream_status"])
 
     def test_health_route_returns_a_typed_status_document(self):
         """Removing the route would stop the Reliability UI from loading health."""

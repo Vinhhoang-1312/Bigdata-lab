@@ -13,10 +13,19 @@ npm run dev
 
 In another terminal, open `http://127.0.0.1:5173/streaming` and
 `http://127.0.0.1:5173/ml`. Streaming has Dispatch and Reliability views;
-ML has Forecast and Evidence views. The current Gold is a February 2023 replay,
-not current city traffic. ML inference is experimental: raw held-out WAPE is
-69.1% error, while the final baseline comparison is incomplete. Pages read on
-entry or when Refresh is clicked, not on a timer.
+ML has Forecast and Evidence views. Viewpoints have direct URLs and survive
+browser reload/Back. The current Gold is a February 2023 replay, not current
+city traffic; the Spark streaming job is stopped. ML inference is research-only:
+raw held-out GTQN WAPE is 69.1% error, while a simple same-time-last-week
+reference scores 24.3% error on the same number of observed test targets.
+The legacy GTQN report lacks a dataset fingerprint, so this comparison is
+diagnostic, not a final frozen benchmark. Pages read on entry or when Refresh
+is clicked, not on a timer. See [release readiness](docs/release-readiness-2026-09-25.md)
+before presenting this as a product.
+
+Docker Desktop's data disk on this machine is currently on **C:**, not D:.
+Do not download or train on large new datasets until its storage location is
+moved and verified. The npm cache command above uses D.
 
 ## Legacy Streamlit quick start
 
@@ -81,7 +90,10 @@ holds the contracts they share but is not a step in the pipeline.
                     |                     |
                   Kafka  --------> [ urbanflow-streaming ]  = C
                                     Kafka + Gold historical   (Spark Structured
-                                    -> Gold live -> app        Streaming + Streamlit)
+                                    -> Gold live -> app        Streaming + React UI)
+
+            Silver -> ML tensor -> Spark-launched PyTorch DDP
+                    -> GTQN checkpoint -> ML API -> React ML UI
 
   ------------------------------------------------------------------
   [ urbanflow-foundation ]  shared contracts + fixtures under A, B, C

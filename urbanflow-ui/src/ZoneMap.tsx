@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import maplibregl, { type GeoJSONSource, type Map as MapLibreMap } from 'maplibre-gl'
 import type { ZoneRow } from './types'
+import { demandClass } from './zoneClass'
 
 type Feature = { type: 'Feature'; properties: Record<string, unknown>; geometry: unknown }
 type ZoneGeoJson = { type: 'FeatureCollection'; features: Feature[] }
@@ -32,7 +33,7 @@ export default function ZoneMap({ geometry, rows, selectedZone, onSelect }: {
       instance.addLayer({
         id: 'zones-fill', type: 'fill', source: 'zones',
         paint: {
-          'fill-color': ['match', ['get', 'demand_class'], 'high', '#c7353b', 'near', '#dda94b', 'below', '#198d85', '#aeb9bd'],
+          'fill-color': ['match', ['get', 'demand_class'], 'high', '#c7353b', 'near', '#dda94b', 'below', '#198d85', 'no-baseline', '#667f89', '#aeb9bd'],
           'fill-opacity': ['match', ['get', 'demand_class'], 'missing', 0.12, 0.68],
         },
       })
@@ -66,9 +67,8 @@ export default function ZoneMap({ geometry, rows, selectedZone, onSelect }: {
       type: 'FeatureCollection',
       features: geometry.features.map(feature => {
         const row = byId.get(Number(feature.properties.location_id))
-        const ratio = row?.demand_ratio
         return { ...feature, properties: { ...feature.properties,
-          demand_class: row == null || ratio == null ? 'missing' : ratio > 1.5 ? 'high' : ratio >= 0.8 ? 'near' : 'below',
+          demand_class: demandClass(row),
           current_trips: row?.current_trip_count ?? null,
         } }
       }),

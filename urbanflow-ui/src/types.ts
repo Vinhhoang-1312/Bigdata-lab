@@ -21,11 +21,13 @@ export type StreamingOverview = {
 
 export type StreamingHealth = {
   status: 'available' | 'degraded' | 'empty'
+  gold_source_uri: string
   latest_window_end: string | null
   live_gold_age_seconds: number | null
   live_gold_row_count: number
   telemetry_status: 'available' | 'unavailable'
   invalid_record_count: number | null
+  spark_stream_status: 'active' | 'inactive' | 'unavailable'
 }
 
 export type ForecastOptions = {
@@ -50,10 +52,30 @@ export type Forecast = {
   best_epoch: number
   training_end_epoch: number
   benchmark_status: string
+  use_status: 'research_only'
+  observed_actual: number | null
+  weekly_naive: number | null
 }
 
 export type Evidence = {
   benchmark_status: 'preliminary' | 'unavailable'
+  use_status: 'research_only'
+  preferred_method: 'weekly_naive' | 'undetermined'
+  test_report_fingerprint_verified: boolean
+  baseline_comparison: {
+    method: string
+    test_bucket_count: number
+    target_count: number
+    matched_count: number
+    missing_history_count: number
+    mae: number
+    rmse: number
+    wape: number | null
+    model_mae: number
+    model_wape: number
+    wape_gap: number | null
+    same_test_targets: boolean
+  } | null
   metrics: Record<string, number | string> | null
   distributed_training: { status?: string; world_size?: number; distinct_host_count?: number; hosts?: string[] }
   run_id: string

@@ -7,6 +7,11 @@ after starting `ml-api` and Vite (root README). It loads verified GTQN weights
 from SeaweedFS and supports 30-minute buckets in the February 2023 held-out
 period. The raw test report has WAPE 69.1% error, MAE 5.61 trips and P10-P90
 coverage 90.2%; this is not 69.1% classification accuracy or a final benchmark.
+The same-time-last-week reference has WAPE 24.3% and MAE 1.97 trips on
+356,160 observed February targets; GTQN has MAE 5.61. Therefore this GTQN run
+is **research-only and not recommended for operational dispatch**. The UI
+shows the observed replay count, weekly reference, and GTQN output for each
+chosen zone/bucket. See [release readiness](../docs/release-readiness-2026-09-25.md).
 
 `best.pt` says `epoch=10` because training ended then, but its restored model
 weights match `stopper.best_state` from best validation epoch 2. The serving API
@@ -166,9 +171,11 @@ docker compose run --rm spark-submit --master spark://spark-master:7077 /workspa
 
 The evaluator writes
 `s3a://urbanflow/dev/ml/runs/<run-id>/training/<variant>/test_metrics.json`.
-It is a PASS-only evidence envelope: it records the run, variant, artifact
-fingerprint, configuration hash, evaluation time, and metrics. A failed or
-unfinished evaluation cannot become ML UI evidence.
+New evidence code can include artifact fingerprint, configuration hash, time,
+and metrics. **The current legacy `gtqn-20260917-001` file is flat metrics
+only and has no dataset fingerprint or exact key manifest.** The ML API shows
+this provenance gap rather than silently calling the comparison final. A
+failed or unfinished evaluation cannot become ML UI evidence.
 
 ## Quan sat run
 

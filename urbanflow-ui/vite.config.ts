@@ -9,5 +9,5 @@ export default defineConfig({
       '/v1/forecast': 'http://127.0.0.1:8002',
     },
   },
-  test: { environment: 'jsdom' },
+  test: { environment: 'jsdom', include: ['src/**/*.test.ts'] },
 })

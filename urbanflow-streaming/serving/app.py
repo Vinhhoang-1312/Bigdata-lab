@@ -16,6 +16,7 @@ from analytics_app.data_access import GoldReader
 from analytics_app.zones import load_zone_lookup
 from analytics_app.zones import GEOJSON_PATH
 from serving.streaming_service import build_streaming_health, build_streaming_overview
+from serving.spark_status import read_stream_job_status
 
 T = TypeVar("T")
 _live_cache: dict[str, tuple[float, object]] = {}
@@ -75,6 +76,9 @@ def create_app() -> FastAPI:
         return read_gold_or_503(lambda: build_streaming_health(
             reader, telemetry=None, now=datetime.now(timezone.utc),
             live=read_live_snapshot(reader, refresh=refresh),
+            spark_stream_status=read_stream_job_status(
+                os.getenv("URBANFLOW_SPARK_MASTER_STATUS_URL", "http://spark-master:8080/json")
+            ),
         ))
 
     @app.get("/v1/streaming/zones")

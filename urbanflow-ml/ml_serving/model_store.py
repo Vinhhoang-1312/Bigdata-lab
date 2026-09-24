@@ -22,10 +22,23 @@ from forecasting.distributed import (
 from forecasting.gtqn import GTQNLite
 from forecasting.scaling import RobustZoneScaler
 from forecasting.tensor_data import load_tensor_artifact
+from forecasting.weekly_naive_audit import weekly_naive_report
 
 NEW_YORK = ZoneInfo("America/New_York")
 DEFAULT_RUN_ID = "gtqn-20260917-001"
 DEFAULT_CONFIG = Path(__file__).resolve().parents[1] / "config/settings.example.yaml"
+
+
+def retrospective_reference(arrays: dict, target_index: int, zone_index: int) -> dict:
+    observed = arrays["observed"]
+    counts = arrays["counts"]
+    prior_index = target_index - 336
+    return {
+        "observed_actual": float(counts[target_index, zone_index])
+        if observed[target_index, zone_index] else None,
+        "weekly_naive": float(counts[prior_index, zone_index])
+        if prior_index >= 0 and observed[prior_index, zone_index] else None,
+    }
 
 
 def resolve_target_index(timestamps: np.ndarray, forecast_at: str) -> int:
@@ -73,18 +86,56 @@ def predict_at(model, arrays: dict, metadata: dict, zone_id: int, forecast_at: s
     }
 
 
-def evidence_document(metrics: dict | None, result: dict | None) -> dict:
+def validate_report_provenance(report: dict, dataset_fingerprint: str) -> bool:
+    reported = (report.get("artifact") or {}).get("dataset_fingerprint")
+    if reported is None:
+        return False
+    if reported != dataset_fingerprint:
+        raise ValueError("test report dataset fingerprint mismatch")
+    return True
+
+
+def evidence_document(metrics: dict | None, result: dict | None, baseline: dict | None = None,
+                      *, report_fingerprint_verified: bool = False) -> dict:
     distribution = (result or {}).get("distribution", {})
+    comparison = None
+    comparison_missing = []
+    preferred_method = "undetermined"
+    if metrics and metrics.get("status") == "PASS" and baseline is not None:
+        same_targets = (
+            int(metrics["observed_target_count"]) == int(baseline["target_count"])
+            and int(baseline["matched_count"]) == int(baseline["target_count"])
+            and int(metrics["test_bucket_count"]) == int(baseline["test_bucket_count"])
+        )
+        if same_targets:
+            model_wape = float(metrics["wape"])
+            baseline_wape = baseline["wape"]
+            comparison = {
+                **baseline,
+                "same_test_targets": True,
+                "model_wape": model_wape,
+                "model_mae": float(metrics["mae"]),
+                "wape_gap": model_wape - baseline_wape if baseline_wape is not None else None,
+            }
+            if baseline_wape is not None and baseline_wape < model_wape:
+                preferred_method = "weekly_naive"
+        else:
+            comparison_missing.append("Baseline and model lack the same observed test targets.")
     return {
         "benchmark_status": "preliminary" if metrics and metrics.get("status") == "PASS" else "unavailable",
+        "use_status": "research_only",
+        "preferred_method": preferred_method,
+        "baseline_comparison": comparison,
+        "test_report_fingerprint_verified": report_fingerprint_verified,
         "metrics": metrics if metrics and metrics.get("status") == "PASS" else None,
         "distributed_training": distribution,
         "run_id": (result or {}).get("run_id", DEFAULT_RUN_ID),
         "best_epoch": (result or {}).get("best_epoch"),
         "training_end_epoch": (result or {}).get("last_epoch"),
         "parameter_count": (result or {}).get("parameter_count"),
-        "missing_evidence": [
-            "same-key seasonal-naive and Spark MLlib GBT comparison",
+        "missing_evidence": comparison_missing + (["Legacy test report has no dataset fingerprint or exact key manifest."]
+                             if not report_fingerprint_verified else []) + [
+            "same-key Spark MLlib GBT and remaining model comparisons",
             "validation-WAPE checkpoint selection",
             "interval calibration and coverage by zone",
         ],
@@ -148,6 +199,11 @@ class ModelStore:
         if int(self.result.get("best_epoch", -1)) != self.best_epoch:
             raise ValueError("training manifest best epoch does not match checkpoint")
         self.metrics = self._read_json(f"{self.prefix}/test_metrics.json")
+        self.report_fingerprint_verified = (
+            validate_report_provenance(self.metrics, self.metadata["dataset_fingerprint"])
+            if self.metrics is not None else False
+        )
+        self.weekly_baseline = weekly_naive_report(self.arrays, self.metadata)
         self.zone_names = self._read_zone_names()
 
     def _read_json(self, key: str) -> dict | None:
@@ -181,12 +237,16 @@ class ModelStore:
     def forecast(self, zone_id: int, forecast_at: str) -> dict:
         result = predict_at(self.model, self.arrays, self.metadata, zone_id, forecast_at,
                             lookback=int(self.config["tensor"]["lookback_buckets"]))
-        return {**result, "run_id": self.run_id, "best_epoch": self.best_epoch,
+        target_index = resolve_target_index(self.arrays["timestamps"], forecast_at)
+        zone_index = int(np.flatnonzero(self.arrays["zone_ids"] == zone_id)[0])
+        reference = retrospective_reference(self.arrays, target_index, zone_index)
+        return {**result, **reference, "run_id": self.run_id, "best_epoch": self.best_epoch,
                 "training_end_epoch": int(self.result["last_epoch"]),
-                "benchmark_status": "preliminary"}
+                "benchmark_status": "preliminary", "use_status": "research_only"}
 
     def evidence(self) -> dict:
-        return evidence_document(self.metrics, self.result)
+        return evidence_document(self.metrics, self.result, self.weekly_baseline,
+                                 report_fingerprint_verified=self.report_fingerprint_verified)
 
 
 @lru_cache(maxsize=1)

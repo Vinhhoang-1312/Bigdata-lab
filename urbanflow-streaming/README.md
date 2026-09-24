@@ -2,7 +2,7 @@
 
 **Subproject C — Live Processing and Analytics Serving**
 **Foundation baseline:** `urbanflow-foundation` 1.0.0
-**Primary technologies:** Apache Spark Structured Streaming, Kafka, SeaweedFS/S3A, Parquet, Streamlit
+**Primary technologies:** Apache Spark Structured Streaming, Kafka, SeaweedFS/S3A, Parquet, FastAPI, React/MapLibre (Streamlit is legacy)
 
 ## Full documentation
 
@@ -27,7 +27,8 @@ Kafka + Historical Gold -> Live Gold -> Analytics Application
   per-zone trip counts.
 - Join with the historical baseline to compute the **demand ratio**
   (current count / historical mean) and a nullable z-score.
-- A Streamlit app surfaces whether current activity is unusual versus history.
+- A React workspace reads Live Gold through a thin FastAPI service; legacy
+  Streamlit remains available for comparison.
 
 The Kafka event contract, historical/live Gold contracts, storage paths, time
 semantics, and null/join rules follow `urbanflow-foundation` 1.0.0.
@@ -130,6 +131,11 @@ or integrated Parquet and validates the Foundation schema in both modes.
 The primary Streaming workspace is `http://127.0.0.1:5173/streaming` after
 starting `streaming-api` and Vite as described in the root README. Streamlit is
 retained as a diagnostic comparison, not the primary interface.
+The current configured Gold path is a bounded February 2023 replay. The
+Reliability view now reads Spark Master's active-app list and reports whether
+`UrbanFlowLiveMetrics` is running. This check is separate from Kafka lag and
+invalid-record telemetry, which are still unavailable. See the
+[release-readiness report](../docs/release-readiness-2026-09-25.md).
 
 Fixture data is the default:
 

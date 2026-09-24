@@ -58,6 +58,7 @@ def build_streaming_health(
     telemetry: dict[str, Any] | None,
     now: datetime,
     live: pd.DataFrame | None = None,
+    spark_stream_status: str = "unavailable",
 ) -> dict[str, Any]:
     """Report freshness and optional telemetry while preserving unknown states."""
     if now.tzinfo is None or now.utcoffset() is None:
@@ -66,19 +67,23 @@ def build_streaming_health(
     if live.empty:
         return {
             "status": "empty",
+            "gold_source_uri": reader.live_path,
             "latest_window_end": None,
             "live_gold_age_seconds": None,
             "live_gold_row_count": 0,
             "telemetry_status": "unavailable" if telemetry is None else "available",
             "invalid_record_count": None if telemetry is None else telemetry.get("invalid_record_count"),
+            "spark_stream_status": spark_stream_status,
         }
     latest_end = live["window_end"].max()
     age_seconds = max(0, int((pd.Timestamp(now).tz_convert("UTC") - latest_end).total_seconds()))
     return {
         "status": "degraded" if age_seconds > 300 else "available",
+        "gold_source_uri": reader.live_path,
         "latest_window_end": _iso(latest_end),
         "live_gold_age_seconds": age_seconds,
         "live_gold_row_count": int(len(live)),
         "telemetry_status": "unavailable" if telemetry is None else "available",
         "invalid_record_count": None if telemetry is None else telemetry.get("invalid_record_count"),
+        "spark_stream_status": spark_stream_status,
     }

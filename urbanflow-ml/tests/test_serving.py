@@ -58,6 +58,57 @@ class ForecastServingTest(unittest.TestCase):
         self.assertEqual(2, result["distributed_training"]["world_size"])
         self.assertTrue(result["missing_evidence"])
 
+    def test_evidence_recommends_against_operational_gtqn_when_weekly_baseline_wins(self):
+        from ml_serving.model_store import evidence_document
+
+        metrics = {"status": "PASS", "wape": 0.69, "mae": 5.6,
+                   "observed_target_count": 356160, "test_bucket_count": 1344}
+        baseline = {"method": "same_zone_same_half_hour_previous_week", "wape": 0.24,
+                    "mae": 1.97, "target_count": 356160, "matched_count": 356160,
+                    "test_bucket_count": 1344}
+        result = evidence_document(metrics, {"distribution": {"status": "PASS"}}, baseline)
+
+        self.assertEqual("research_only", result["use_status"])
+        self.assertEqual("weekly_naive", result["preferred_method"])
+        self.assertTrue(result["baseline_comparison"]["same_test_targets"])
+        self.assertAlmostEqual(0.45, result["baseline_comparison"]["wape_gap"])
+
+    def test_evidence_keeps_model_metrics_when_baseline_targets_do_not_match(self):
+        from ml_serving.model_store import evidence_document
+
+        metrics = {"status": "PASS", "wape": 0.69, "observed_target_count": 10,
+                   "test_bucket_count": 1}
+        baseline = {"wape": 0.24, "target_count": 10, "matched_count": 9,
+                    "test_bucket_count": 1}
+        result = evidence_document(metrics, {}, baseline)
+        self.assertIsNone(result["baseline_comparison"])
+        self.assertIn("same observed test targets", " ".join(result["missing_evidence"]))
+        self.assertEqual(metrics, result["metrics"])
+
+    def test_legacy_test_report_without_fingerprint_is_visible_but_not_verified(self):
+        from ml_serving.model_store import validate_report_provenance
+
+        self.assertFalse(validate_report_provenance({"status": "PASS"}, "current-fingerprint"))
+        self.assertTrue(validate_report_provenance(
+            {"artifact": {"dataset_fingerprint": "current-fingerprint"}}, "current-fingerprint"))
+        with self.assertRaisesRegex(ValueError, "fingerprint mismatch"):
+            validate_report_provenance(
+                {"artifact": {"dataset_fingerprint": "different"}}, "current-fingerprint")
+
+    def test_retrospective_reference_never_invents_missing_weekly_history(self):
+        from ml_serving.model_store import retrospective_reference
+
+        counts = np.zeros((337, 1), dtype=np.float32)
+        counts[0, 0] = 8
+        counts[336, 0] = 10
+        observed = np.ones_like(counts, dtype=bool)
+        arrays = {"counts": counts, "observed": observed}
+        self.assertEqual({"observed_actual": 10.0, "weekly_naive": 8.0},
+                         retrospective_reference(arrays, 336, 0))
+        observed[0, 0] = False
+        self.assertEqual({"observed_actual": 10.0, "weekly_naive": None},
+                         retrospective_reference(arrays, 336, 0))
+
     def test_best_step_must_match_restored_model_weights(self):
         from ml_serving.model_store import verified_best_step
 

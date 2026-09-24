@@ -11,6 +11,7 @@ function metricNumber(value: string | number | undefined): number | null {
 
 function EvidenceView({ evidence }: { evidence: Evidence }) {
   const metrics = evidence.metrics
+  const baseline = evidence.baseline_comparison
   const wape = metricNumber(metrics?.wape)
   const mae = metricNumber(metrics?.mae)
   const rmse = metricNumber(metrics?.rmse)
@@ -18,7 +19,13 @@ function EvidenceView({ evidence }: { evidence: Evidence }) {
   const distribution = evidence.distributed_training
   return <>
     <div className="source-strip replay"><span className="source-dot" /><strong>Experimental model</strong><span>GTQN-Lite · {evidence.run_id}</span><span className="source-detail">Benchmark {evidence.benchmark_status}</span></div>
-    <div className="evidence-intro"><div><span className="eyebrow">Held-out February 2023</span><h2>How well does it forecast?</h2><p>These are measured errors on observed pickup counts. They are not classification accuracy. The comparison with simpler models is still incomplete.</p></div><Tag color="gold">Preliminary test</Tag></div>
+    <div className="evidence-intro"><div><span className="eyebrow">Held-out February 2023</span><h2>How well does it forecast?</h2><p>Measured errors on taxi pickups, not classification accuracy. This is a diagnostic comparison, not a complete model benchmark.</p></div><Tag color="red">Research only</Tag></div>
+    {baseline && <section className="benchmark-band" aria-label="Weekly baseline comparison">
+      <div><span className="eyebrow">Simple reference</span><h2>Same time last week</h2><p>For each zone, use its observed pickup count exactly 7 days earlier.</p></div>
+      <div className="benchmark-scores"><div><span>Weekly baseline WAPE</span><strong>{wapeLabel(baseline.wape)}</strong><small>MAE {baseline.mae.toFixed(2)} trips</small></div><div><span>GTQN WAPE</span><strong>{wapeLabel(baseline.model_wape)}</strong><small>MAE {baseline.model_mae.toFixed(2)} trips</small></div></div>
+      <p className="benchmark-verdict"><TriangleAlert size={17} /> {evidence.preferred_method === 'weekly_naive' ? 'Weekly baseline performs better. Do not use this GTQN run for operational decisions.' : 'A full model comparison is still required.'}</p>
+      <small>{formatCount(baseline.matched_count)} observed targets compared; {baseline.missing_history_count} without weekly history. {evidence.test_report_fingerprint_verified ? 'Report fingerprint verified.' : 'Legacy GTQN report has no dataset fingerprint; this comparison remains diagnostic.'}</small>
+    </section>}
     {metrics ? <div className="metrics-band evidence-metrics">
       <div className="metric"><span className="metric-label">WAPE</span><strong>{wapeLabel(wape)}</strong><small>Total absolute error / total pickups</small></div>
       <div className="metric"><span className="metric-label">MAE</span><strong>{mae == null ? '—' : mae.toFixed(2)}</strong><small>Trips per zone / 30-minute bucket</small></div>
@@ -35,9 +42,12 @@ function EvidenceView({ evidence }: { evidence: Evidence }) {
 
 function ForecastResult({ result, name }: { result: Forecast; name: string }) {
   const width = result.p90 - result.p10
+  const actual = result.observed_actual
+  const weekly = result.weekly_naive
   return <section className="forecast-result" aria-live="polite">
     <div className="section-heading"><div><span className="eyebrow">Model output / 30 minutes</span><h2>{name}</h2></div><Tag color="gold">Experimental</Tag></div>
     <div className="forecast-big"><div><span>Central estimate · P50</span><strong>{result.p50.toFixed(1)}</strong><small>pickup trips</small></div><div className="forecast-range"><span>Estimated range · P10–P90</span><strong>{result.p10.toFixed(1)} to {result.p90.toFixed(1)}</strong><small>Wider means more uncertainty</small></div></div>
+    <div className="retrospective-band"><span className="eyebrow">Historical replay check</span><div className="retrospective-values"><div><span>Observed pickups</span><strong>{actual == null ? 'Unavailable' : actual.toFixed(0)}</strong></div><div><span>Same time last week</span><strong>{weekly == null ? 'Unavailable' : weekly.toFixed(0)}</strong><small>{actual != null && weekly != null ? `Absolute error: ${Math.abs(weekly - actual).toFixed(1)} trips` : 'Weekly source not observed'}</small></div><div><span>GTQN median</span><strong>{result.p50.toFixed(1)}</strong><small>{actual == null ? 'Actual not observed' : `Absolute error: ${Math.abs(result.p50 - actual).toFixed(1)} trips`}</small></div></div></div>
     <div className="range-track"><div className="range-fill" style={{ width: '100%' }} /><div className="range-mid" style={{ left: `${width > 0 ? Math.max(2, Math.min(98, ((result.p50 - result.p10) / width) * 100)) : 50}%` }} /></div>
     <div className="range-labels"><span>P10 · {result.p10.toFixed(1)}</span><span>P50 · {result.p50.toFixed(1)}</span><span>P90 · {result.p90.toFixed(1)}</span></div>
     <p className="result-note">Forecast for {result.forecast_at.slice(0, 16).replace('T', ' ')} New York time. The model used {result.observed_history_buckets} of {result.history_buckets} observed history buckets. Best weights: epoch {result.best_epoch}; training ended: epoch {result.training_end_epoch}.</p>
@@ -46,7 +56,7 @@ function ForecastResult({ result, name }: { result: Forecast; name: string }) {
 
 export default function MachineLearning({ viewpoint }: { viewpoint: 'forecast' | 'evidence' }) {
   const options = useResource<ForecastOptions>('ml-options', '/v1/forecast/options')
-  const evidence = useResource<Evidence>('ml-evidence', '/v1/forecast/evidence')
+  const evidence = useResource<Evidence>('ml-evidence-v2', '/v1/forecast/evidence')
   const [zone, setZone] = useState<number | null>(null)
   const [bucket, setBucket] = useState<string | null>(null)
   const [result, setResult] = useState<Forecast | null>(null)
@@ -85,7 +95,7 @@ export default function MachineLearning({ viewpoint }: { viewpoint: 'forecast' |
         <p className="form-footnote"><ShieldCheck size={15} /> The API checks the dataset fingerprint and checkpoint configuration before inference.</p>
       </section>
       <div className="forecast-output">{forecastError && <Alert type="error" showIcon message="Forecast unavailable" description={forecastError} />}{result ? <ForecastResult result={result} name={selectedName} /> : <div className="forecast-empty"><span className="empty-icon"><Search size={29} /></span><h2>Ready to forecast</h2><p>Select a zone and time, then run the model. The output will show a central estimate and an uncertainty range.</p></div>}
-        <div className="forecast-context"><span className="eyebrow">How to use this output</span><p>Compare the forecast with staffing or vehicle availability, not as an automatic dispatch order. The current test WAPE is {wapeLabel(metricNumber(evidence.data?.metrics?.wape))}; simple-model benchmarks are still missing.</p></div>
+        <div className="forecast-context"><span className="eyebrow">Research-only output</span><p>This is a historical February 2023 forecast, not a live prediction. GTQN test WAPE is {wapeLabel(metricNumber(evidence.data?.metrics?.wape))}; the weekly baseline is {wapeLabel(evidence.data?.baseline_comparison?.wape ?? null)}. The simpler method performs better, so do not use GTQN here for dispatch decisions.</p></div>
       </div></div>
     </>}
     {options.savedAt && <div className="fetch-note">Model information read at {new Date(options.savedAt).toLocaleString()} · Refresh is manual</div>}
