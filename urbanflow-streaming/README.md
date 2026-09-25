@@ -171,9 +171,20 @@ export URBANFLOW_S3_ENDPOINT=http://seaweedfs:8333
 uvicorn serving.app:app --host 0.0.0.0 --port 8001
 ```
 
-The API returns `503` when Gold is unavailable or its storage configuration is
-invalid. This keeps an infrastructure problem distinct from a successful but
-empty analytics result.
+Endpoints are separated by responsibility:
+
+```text
+GET /health/live              process-only liveness; no storage or Kafka I/O
+GET /health/ready             configuration and telemetry readiness
+GET /v1/pipeline/status       Spark/Kafka/watermark/governance status
+GET /v1/analytics/latest      latest completed Live Gold window
+GET /v1/streaming/health      backward-compatible pipeline-status alias
+GET /v1/streaming/overview    backward-compatible latest-window alias
+```
+
+The API returns `503` when required configuration, telemetry, or Gold storage is
+unavailable. Historical replay freshness uses the latest Live Gold storage commit
+time, not the 2023 event timestamp compared with the host wall clock.
 
 ## Streaming and backlog measurements
 

@@ -1,18 +1,18 @@
 # Analytics Smoke Result
 
-Date: 2026-09-23T20:13:47Z
+Date: 2026-09-25T17:40:52Z
 Status: `PASS`
 
 ## Summary
 
 - Historical rows: `534240`
-- Live rows: `39593`
-- Prepared view rows: `39593`
-- Latest-window rows: `62`
-- Painted zone polygons: `61`
-- High-demand latest zones: `13`
+- Live rows: `168`
+- Prepared view rows: `168`
+- Latest-window rows: `36`
+- Painted zone polygons: `35`
+- High-demand latest zones: `17`
 - Chart mode: `line`
-- Latest window: `2023-02-01 15:19 NY`
+- Latest window: `2023-02-01 01:10 NY`
 - Streamlit URL: `None`
 - Streamlit HTTP status: `None`
 - Historical path: `s3a://urbanflow/gold/historical_zone_baseline/`

@@ -65,6 +65,27 @@ class GlassCockpitObservabilityTest(unittest.TestCase):
         self.assertEqual({"0": 1000, "1": 1010, "2": 1000, "3": 1010}, snap.kafka_partition_end_offsets)
         self.assertEqual({"0": 1050, "1": 1040, "2": 1035, "3": 1045}, snap.kafka_partition_latest_offsets)
 
+    def test_invalid_query_progress_does_not_count_all_source_rows_as_invalid(self):
+        """Only the invalid foreachBatch callback may increment rejected-row totals."""
+        from spark.streaming_metrics import UrbanFlowMetricsListener
+
+        class Progress:
+            json = json.dumps({
+                "name": "invalid_events",
+                "batchId": 1,
+                "numInputRows": 500,
+                "sink": {"numOutputRows": -1},
+            })
+
+        class Event:
+            progress = Progress()
+
+        listener = UrbanFlowMetricsListener()
+        listener.onQueryProgress(Event())
+        self.assertEqual(0, listener.snapshot()["invalid_events"])
+        listener.record_invalid(3)
+        self.assertEqual(3, listener.snapshot()["invalid_events"])
+
     def test_trigger_load_and_throughput_ratio_semantic_separation(self):
         """trigger_load (duty cycle) and throughput_ratio (rate ratio) must be distinct metrics."""
         from spark.streaming_metrics import snapshot_from_progress
@@ -120,20 +141,45 @@ class GlassCockpitObservabilityTest(unittest.TestCase):
 
         now = datetime(2025, 1, 6, 13, 0, 0, tzinfo=timezone.utc)
         tel = {
-            "timestamp": "2025-01-06T12:59:58+00:00",
             "batch_id": 5,
             "input_rows_per_second": 50.0,
             "processed_rows_per_second": 0.0,
             "kafka_total_backlog_rows": 200,
         }
-        # 3 consecutive observations of batch 5 while input is active
-        classify_health(tel, live_gold_age_seconds=10, now_utc=now)
-        classify_health(tel, live_gold_age_seconds=10, now_utc=now)
-        res = classify_health(tel, live_gold_age_seconds=10, now_utc=now)
+        # Three distinct telemetry heartbeats observe batch 5 while input is active.
+        for second in (56, 57):
+            classify_health(
+                {**tel, "timestamp": f"2025-01-06T12:59:{second}+00:00"},
+                live_gold_age_seconds=10,
+                now_utc=now,
+            )
+        res = classify_health(
+            {**tel, "timestamp": "2025-01-06T12:59:58+00:00"},
+            live_gold_age_seconds=10,
+            now_utc=now,
+        )
 
         self.assertEqual(HealthState.STALE.value, res["state"])
         self.assertIn("not advanced", res["reason"])
         self.assertFalse(res["source_idle"])
+
+    def test_live_gold_age_over_300s_when_input_expected_is_stale(self):
+        """When input is expected but Live Gold age exceeds 300s, classify as STALE."""
+        now = datetime(2025, 1, 6, 13, 0, 0, tzinfo=timezone.utc)
+        tel_active = {
+            "timestamp": "2025-01-06T12:59:58+00:00",
+            "batch_id": 10,
+            "input_rows_per_second": 40.0,
+            "processed_rows_per_second": 40.0,
+            "num_input_rows": 200,
+            "kafka_total_backlog_rows": 100,
+            "batch_duration_ms": 1000,
+            "trigger_interval_ms": 5000,
+            "watermark": "2025-01-06T12:50:00Z",
+        }
+        res = classify_health(tel_active, live_gold_age_seconds=350, now_utc=now)
+        self.assertEqual(HealthState.STALE.value, res["state"])
+        self.assertIn("300", res["reason"])
 
     def test_inactive_idle_source_unchanged_batch_is_healthy(self):
         """Legitimate source idle (0 backlog, 0 eps) must be HEALTHY, not false-alarm STALE."""
@@ -169,9 +215,9 @@ class GlassCockpitObservabilityTest(unittest.TestCase):
 
         now = datetime(2025, 1, 6, 13, 0, 0, tzinfo=timezone.utc)
         # Establish increasing backlog history with advancing batches: 10 -> 25 -> 40
-        for bid, bl in enumerate([10, 25, 40], start=1):
+        for second, (bid, bl) in enumerate(zip(range(1, 4), [10, 25, 40]), start=55):
             classify_health({
-                "timestamp": "2025-01-06T12:59:58+00:00",
+                "timestamp": f"2025-01-06T12:59:{second}+00:00",
                 "batch_id": bid,
                 "input_rows_per_second": 10.0,
                 "processed_rows_per_second": 10.0,
@@ -218,6 +264,20 @@ class GlassCockpitObservabilityTest(unittest.TestCase):
         self.assertEqual("2023-02-01T08:05:00-05:00", wm_info["current_watermark"])
         self.assertEqual("2023-02-01T08:15:00-05:00", wm_info["max_event_time"])
         self.assertEqual("10 minutes", wm_info["configured_delay"])
+
+        # Frozen watermark (same as previous) must report advancing=False
+        frozen_wm = build_watermark_status({
+            "watermark": "2023-02-01T08:05:00-05:00",
+            "max_event_time": "2023-02-01T08:15:00-05:00",
+        }, prev_watermark="2023-02-01T08:05:00-05:00")
+        self.assertFalse(frozen_wm["advancing"])
+
+        # Advanced watermark (greater than previous) must report advancing=True
+        advanced_wm = build_watermark_status({
+            "watermark": "2023-02-01T08:10:00-05:00",
+            "max_event_time": "2023-02-01T08:20:00-05:00",
+        }, prev_watermark="2023-02-01T08:05:00-05:00")
+        self.assertTrue(advanced_wm["advancing"])
 
         no_wm = build_watermark_status(None)
         self.assertIsNone(no_wm["advancing"])

@@ -141,8 +141,10 @@ def validate_runtime_paths(output_path: str, checkpoint_path: str) -> None:
         raise ValueError("Live Gold and checkpoint paths must be different")
 
     for label, value in (("Live Gold", output_path), ("checkpoint", checkpoint_path)):
-        if _is_local_path(value) and _is_under(_resolved(value), FOUNDATION_FIXTURES):
-            raise ValueError(f"{label} generated output must not be below Foundation fixtures")
+        if _is_local_path(value):
+            norm = Path(value).as_posix()
+            if "urbanflow-foundation/fixtures" in norm or _is_under(_resolved(value), FOUNDATION_FIXTURES):
+                raise ValueError(f"{label} generated output must not be below Foundation fixtures")
 
 
 def write_live_gold(
@@ -156,6 +158,8 @@ def write_live_gold(
     validate_runtime_paths(output_path, checkpoint_path)
     writer = (metrics.writeStream.format("parquet").outputMode("append")
               .option("path", output_path).option("checkpointLocation", checkpoint_path))
+    if hasattr(writer, "queryName"):
+        writer = writer.queryName("live_gold")
     if available_now:
         writer = writer.trigger(availableNow=True)
     else:
@@ -167,8 +171,26 @@ def write_invalid_rows(
     invalid: DataFrame,
     trigger: str = "10 seconds",
     available_now: bool = False,
+    on_batch_count=None,
 ):
-    writer = invalid.writeStream.format("console").outputMode("append").queryName("invalid_events")
+    """Expose malformed rows and count only rows that reach the invalid sink."""
+    def emit_invalid_batch(batch: DataFrame, batch_id: int) -> None:
+        batch.persist()
+        try:
+            count = batch.count()
+            if on_batch_count is not None and count:
+                on_batch_count(count)
+            if count:
+                print(f"invalid_batch_id={batch_id} invalid_rows={count}")
+                batch.show(100, truncate=False)
+        finally:
+            batch.unpersist()
+
+    writer = (
+        invalid.writeStream.foreachBatch(emit_invalid_batch)
+        .outputMode("append")
+        .queryName("invalid_events")
+    )
     if available_now:
         writer = writer.trigger(availableNow=True)
     else:
@@ -181,6 +203,23 @@ def _settings(path: str) -> dict:
 
     with open(path, encoding="utf-8") as stream:
         return yaml.safe_load(stream)
+
+
+def _duration_ms(value: str) -> int:
+    """Parse the simple Spark trigger durations used by UrbanFlow configuration."""
+    amount_text, unit = value.strip().lower().split(maxsplit=1)
+    amount = float(amount_text)
+    multipliers = {
+        "millisecond": 1,
+        "milliseconds": 1,
+        "second": 1000,
+        "seconds": 1000,
+        "minute": 60_000,
+        "minutes": 60_000,
+    }
+    if unit not in multipliers:
+        raise ValueError(f"Unsupported streaming trigger duration: {value}")
+    return int(amount * multipliers[unit])
 
 
 def _default_config() -> str:
@@ -201,9 +240,12 @@ def main() -> None:
     )
     args = parser.parse_args()
     cfg = _settings(args.config)
+    streaming_cfg = cfg.get("streaming", {})
+    trigger = streaming_cfg.get("trigger", "10 seconds")
+    listener = None
     spark = configure_session(SparkSession.builder.appName("UrbanFlowLiveMetrics").getOrCreate())
     if not (args.fixture_events or args.available_now):
-        listener = UrbanFlowMetricsListener()
+        listener = UrbanFlowMetricsListener(trigger_interval_ms=_duration_ms(trigger))
         spark.streams.addListener(listener)
     historical = load_historical_baseline(spark, cfg["storage"]["historical_baseline"])
     if args.fixture_events:
@@ -211,7 +253,6 @@ def main() -> None:
         source = spark.readStream.format("text").load(args.fixture_events).select(F.col("value"))
     else:
         source = read_kafka(spark, cfg["kafka"]["bootstrap_servers"], cfg["kafka"]["topic"])
-    streaming_cfg = cfg.get("streaming", {})
     watermark = streaming_cfg.get("watermark", DEFAULT_WATERMARK)
     window_duration = streaming_cfg.get("window_duration", "5 minutes")
     slide_duration = streaming_cfg.get("slide_duration")
@@ -227,12 +268,21 @@ def main() -> None:
     )
     available_now = bool(args.fixture_events or args.available_now)
     validate_runtime_paths(cfg["storage"]["live_metrics"], cfg["storage"]["streaming_checkpoint"])
-    invalid_query = write_invalid_rows(invalid, cfg["streaming"]["trigger"], available_now)
-    query = write_live_gold(gold, cfg["storage"]["live_metrics"],
-                            cfg["storage"]["streaming_checkpoint"],
-                            cfg["streaming"]["trigger"], available_now)
+    invalid_query = write_invalid_rows(
+        invalid,
+        trigger,
+        available_now,
+        on_batch_count=listener.record_invalid if listener is not None else None,
+    )
+    query = write_live_gold(
+        gold,
+        cfg["storage"]["live_metrics"],
+        cfg["storage"]["streaming_checkpoint"],
+        trigger,
+        available_now,
+    )
     
-    if not available_now:
+    if not available_now and listener is not None:
         telemetry_path = cfg.get("telemetry", {}).get("heartbeat_path", "/workspace/.telemetry/streaming_health.json")
         _telemetry_thread = start_telemetry_writer(listener, telemetry_path)
 

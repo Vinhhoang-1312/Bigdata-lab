@@ -110,25 +110,45 @@ class UrbanFlowMetricsListener(StreamingQueryListener):
     def __init__(self, trigger_interval_ms: int = 5000) -> None:
         super().__init__()
         self._lock = Lock()
+        self._snapshots: dict[str, MetricsSnapshot] = {}
         self._snapshot = MetricsSnapshot(trigger_interval_ms=trigger_interval_ms)
-        self._invalid = 0
+        self._invalid_total = 0
         self._trigger_interval_ms = trigger_interval_ms
 
     def record_invalid(self, count: int) -> None:
         with self._lock:
-            self._invalid += count
+            self._invalid_total += count
 
-    def snapshot(self) -> dict[str, Any]:
+    def snapshot(self, query_name: str | None = None) -> dict[str, Any]:
         with self._lock:
-            return asdict(self._snapshot)
+            if query_name and query_name in self._snapshots:
+                snap = self._snapshots[query_name]
+            elif "live_gold" in self._snapshots:
+                snap = self._snapshots["live_gold"]
+            elif self._snapshots:
+                candidates = [s for name, s in self._snapshots.items() if name != "invalid_events"]
+                snap = candidates[0] if candidates else next(iter(self._snapshots.values()))
+            else:
+                snap = self._snapshot
+            d = asdict(snap)
+            d["invalid_events"] = self._invalid_total
+            return d
 
     def onQueryProgress(self, event) -> None:  # noqa: N802 - Spark API
         with self._lock:
-            progress = event.progress.json
+            progress_json = event.progress.json
             import json
-            self._snapshot = snapshot_from_progress(
-                json.loads(progress), self._invalid, self._trigger_interval_ms
+            progress = json.loads(progress_json)
+            name = progress.get("name", "")
+
+            # Invalid rows are counted by the foreachBatch sink callback. Spark's
+            # numInputRows here describes source rows before the filter and would overcount.
+            snap = snapshot_from_progress(
+                progress, self._invalid_total, self._trigger_interval_ms
             )
+            self._snapshots[name] = snap
+            if name != "invalid_events":
+                self._snapshot = snap
 
     def onQueryStarted(self, event) -> None:  # noqa: N802
         return None

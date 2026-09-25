@@ -17,12 +17,19 @@ from typing import Any
 
 # Rolling history of total backlog for trend analysis (last 5 observations)
 _backlog_history: deque[int] = deque(maxlen=5)
+_last_observation_timestamp: str | None = None
 
 
-def record_backlog_observation(total: int | None) -> None:
-    """Record a backlog observation into rolling history."""
-    if total is not None:
-        _backlog_history.append(total)
+def record_backlog_observation(total: int | None, timestamp: str | None = None) -> None:
+    """Record each telemetry observation once, independent of client polling rate."""
+    global _last_observation_timestamp
+    if total is None:
+        return
+    if timestamp and timestamp == _last_observation_timestamp:
+        return
+    _backlog_history.append(total)
+    if timestamp:
+        _last_observation_timestamp = timestamp
 
 
 def compute_backlog_trend(history: list[int] | None = None) -> str | None:
@@ -115,7 +122,7 @@ def build_kafka_backlog_report(
                     "backlog": diff,
                 }
 
-    record_backlog_observation(total_backlog)
+    record_backlog_observation(total_backlog, str(telemetry.get("timestamp") or "") or None)
     trend = compute_backlog_trend()
 
     return {

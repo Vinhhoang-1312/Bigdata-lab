@@ -22,11 +22,23 @@ _VERIFIED_BATCH_REJECTIONS: dict[str, int] = {
 _VERIFIED_BATCH_TOTAL_REJECTED = 25215
 
 
+_BATCH_QUARANTINE_CACHE: dict[str, Any] = {}
+_BATCH_QUARANTINE_CACHE_TIME: float = 0.0
+
+
 def load_batch_quarantine_summary(
     s3_path: str = "s3a://urbanflow/dev/batch/rejected/trips/",
+    cache_ttl_seconds: float = 600.0,
 ) -> dict[str, Any]:
-    """Inspect batch quarantine data from S3, falling back gracefully to verified baseline."""
-    # Try reading from S3 if s3fs and credentials are available
+    """Inspect batch quarantine data from S3, caching results to avoid scanning on fast refreshes."""
+    global _BATCH_QUARANTINE_CACHE, _BATCH_QUARANTINE_CACHE_TIME
+    import time
+
+    now = time.time()
+    if _BATCH_QUARANTINE_CACHE and (now - _BATCH_QUARANTINE_CACHE_TIME) < cache_ttl_seconds:
+        return _BATCH_QUARANTINE_CACHE
+
+    result: dict[str, Any]
     try:
         import s3fs
 
@@ -49,7 +61,6 @@ def load_batch_quarantine_summary(
             reason_counts: Counter[str] = Counter()
             total_rows = 0
             for fpath in files:
-                # Read each file line by line
                 with s3.open(fpath, "r", encoding="utf-8") as f:
                     for line in f:
                         line = line.strip()
@@ -60,22 +71,28 @@ def load_batch_quarantine_summary(
                         for r in row.get("rejection_reasons", []):
                             reason_counts[r] += 1
             if total_rows > 0:
-                return {
+                result = {
                     "available": True,
                     "total_rejected": total_rows,
                     "rejection_reasons": dict(reason_counts.most_common()),
                     "source": "s3_quarantine_scan",
                 }
+                _BATCH_QUARANTINE_CACHE = result
+                _BATCH_QUARANTINE_CACHE_TIME = now
+                return result
     except Exception:
         pass
 
     # Resilient fallback to verified batch execution summary
-    return {
+    result = {
         "available": True,
         "total_rejected": _VERIFIED_BATCH_TOTAL_REJECTED,
         "rejection_reasons": dict(_VERIFIED_BATCH_REJECTIONS),
         "source": "verified_batch_results",
     }
+    _BATCH_QUARANTINE_CACHE = result
+    _BATCH_QUARANTINE_CACHE_TIME = now
+    return result
 
 
 def build_data_governance_report(

@@ -7,7 +7,7 @@ from typing import Any
 
 import pandas as pd
 
-from analytics_app.data_access import GoldReader, prepare_live_view
+from analytics_app.data_access import GoldReader, gold_freshness_age_seconds, prepare_live_view
 from observability.governance import build_data_governance_report
 from observability.health_state import classify_health
 from observability.kafka_backlog import build_kafka_backlog_report
@@ -34,12 +34,14 @@ def build_streaming_overview(reader: GoldReader, lookup: pd.DataFrame) -> dict[s
         "z_score",
         "is_high_demand",
     ]
+    serializable = latest.loc[:, columns].sort_values("demand_ratio", ascending=False)
+    serializable = serializable.astype(object).where(pd.notna(serializable), None)
     return {
         "status": "available",
         "latest_window": _iso(latest["window_start"].iloc[0]),
         "current_trip_count": int(latest["current_trip_count"].sum()),
         "high_demand_zone_count": int(latest["is_high_demand"].sum()),
-        "latest_rows": latest.loc[:, columns].sort_values("demand_ratio", ascending=False).to_dict("records"),
+        "latest_rows": serializable.to_dict("records"),
     }
 
 
@@ -57,11 +59,12 @@ def build_streaming_health(
     if live.empty:
         latest_end_iso = None
         age_seconds = None
+        freshness_basis = "unavailable"
         row_count = 0
     else:
         latest_end = live["window_end"].max()
         latest_end_iso = _iso(latest_end)
-        age_seconds = max(0, int((pd.Timestamp(now).tz_convert("UTC") - latest_end).total_seconds()))
+        age_seconds, freshness_basis = gold_freshness_age_seconds(live, pd.Timestamp(now))
         row_count = int(len(live))
 
     # Health classification
@@ -120,6 +123,7 @@ def build_streaming_health(
     live_gold_freshness = {
         "latest_window_end": latest_end_iso,
         "age_seconds": age_seconds,
+        "basis": freshness_basis,
         "row_count": row_count,
     }
 

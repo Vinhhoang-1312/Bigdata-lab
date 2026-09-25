@@ -18,6 +18,7 @@ def _telemetry_loop(listener: UrbanFlowMetricsListener, path: str, interval: flo
     except Exception:
         pass
     tmp_path = p.with_suffix(".tmp")
+    prev_watermark: str | None = None
     
     while True:
         try:
@@ -38,6 +39,14 @@ def _telemetry_loop(listener: UrbanFlowMetricsListener, path: str, interval: flo
             out_rate = snapshot.get("processed_rows_per_second", 0.0)
             # Separate throughput ratio: input_rows_per_second / processed_rows_per_second
             throughput_ratio = round(in_rate / out_rate, 3) if out_rate > 0 else None
+
+            curr_wm = snapshot.get("watermark")
+            wm_advancing = False
+            if curr_wm and prev_watermark is not None:
+                wm_advancing = str(curr_wm).strip() > str(prev_watermark).strip()
+            elif curr_wm and prev_watermark is None:
+                wm_advancing = True
+            prev_watermark = curr_wm
             
             part_end = snapshot.get("kafka_partition_end_offsets") or {}
             part_latest = snapshot.get("kafka_partition_latest_offsets") or {}
@@ -65,7 +74,8 @@ def _telemetry_loop(listener: UrbanFlowMetricsListener, path: str, interval: flo
                 "trigger_interval_ms": trigger_interval_ms,
                 "trigger_load": trigger_load,
                 "throughput_ratio": throughput_ratio,
-                "watermark": snapshot.get("watermark"),
+                "watermark": curr_wm,
+                "watermark_advancing": wm_advancing,
                 "max_event_time": snapshot.get("max_event_time"),
                 "kafka_source_backlog": snapshot.get("kafka_end_offsets"),
                 "kafka_partition_end_offsets": part_end or None,

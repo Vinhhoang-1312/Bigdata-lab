@@ -47,6 +47,7 @@ class HealthState(Enum):
 # Module-level rolling history (last 5 observations per process).
 _backlog_history: deque[int | None] = deque(maxlen=5)
 _batch_id_history: deque[int] = deque(maxlen=3)
+_last_observation_timestamp: str | None = None
 
 
 def _trigger_load(telemetry: dict[str, Any]) -> float | None:
@@ -175,10 +176,17 @@ def classify_health(
     tr = _throughput_ratio(telemetry)
     bl = _backlog_total(telemetry)
 
-    # Track rolling observations
-    _backlog_history.append(bl)
-    if batch_id is not None:
-        _batch_id_history.append(batch_id)
+    # Track each telemetry heartbeat at most once. Repeated HTTP/UI reads must not
+    # manufacture history or change health state merely because clients poll faster.
+    global _last_observation_timestamp
+    if not _backlog_history and not _batch_id_history:
+        _last_observation_timestamp = None
+    observation_timestamp = str(telemetry.get("timestamp") or "")
+    if observation_timestamp != _last_observation_timestamp:
+        _backlog_history.append(bl)
+        if batch_id is not None:
+            _batch_id_history.append(batch_id)
+        _last_observation_timestamp = observation_timestamp
 
     bt = _backlog_trend()
     wm_ok = _watermark_advancing(telemetry)
@@ -202,6 +210,20 @@ def classify_health(
         return {
             "state": HealthState.STALE.value,
             "reason": f"Batch ID {batch_id} has not advanced for 3 consecutive observations despite pending input (backlog: {bl}, input: {inp} eps).",
+            "telemetry_age_seconds": age,
+            "trigger_load": tl,
+            "throughput_ratio": tr,
+            "batch_id": batch_id,
+            "watermark_advancing": wm_ok,
+            "backlog_trend": bt,
+            "source_idle": False,
+        }
+
+    # B. Live Gold table has not received a new window for > 300 s while input is expected
+    if live_gold_age_seconds is not None and live_gold_age_seconds > 300 and input_expected:
+        return {
+            "state": HealthState.STALE.value,
+            "reason": f"Live Gold table has not received a new window for {live_gold_age_seconds} s (threshold 300 s) despite pending input.",
             "telemetry_age_seconds": age,
             "trigger_load": tl,
             "throughput_ratio": tr,

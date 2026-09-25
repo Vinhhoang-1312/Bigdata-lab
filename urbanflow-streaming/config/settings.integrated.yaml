@@ -3,7 +3,7 @@ time:
   analytics_timezone: America/New_York
 streaming:
   watermark: 10 minutes
-  trigger: 5 seconds
+  trigger: 10 seconds
   window_duration: 5 minutes
 kafka:
   bootstrap_servers: kafka:9092

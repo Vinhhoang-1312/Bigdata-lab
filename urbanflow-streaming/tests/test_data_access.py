@@ -113,6 +113,21 @@ def test_prepare_live_view_uses_new_york_time_and_zone_names(foundation):
     assert midtown.lon == pytest.approx(-73.9812, abs=0.02)
 
 
+def test_replay_freshness_prefers_storage_commit_time():
+    from analytics_app.data_access import gold_freshness_age_seconds
+
+    import pandas as pd
+
+    frame = pd.DataFrame({"window_end": [pd.Timestamp("2023-02-01T00:05:00Z")]})
+    frame.attrs["gold_commit_time"] = pd.Timestamp("2025-01-06T12:59:55Z")
+    age, basis = gold_freshness_age_seconds(
+        frame, pd.Timestamp("2025-01-06T13:00:00Z")
+    )
+
+    assert age == 5
+    assert basis == "storage_commit"
+
+
 def test_single_window_chart_is_grouped_not_line():
     from analytics_app.data_access import chart_mode_for
 

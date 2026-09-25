@@ -1,4 +1,4 @@
-.PHONY: help demo demo-stop demo-status test foundation-check replay-check streaming-check observability-check check-prereqs
+.PHONY: help demo demo-stop demo-status run-ui test foundation-check replay-check streaming-check observability-check check-prereqs
 
 SPEEDUP ?= 60
 # MAX_RATE is optional; when unset, replay Python automatically computes max(500.0, 4.0 * SPEEDUP)
@@ -10,6 +10,7 @@ FASTAPI_PORT ?= 8000
 help:
 	@echo "UrbanFlow Control & Demo Lifecycle:"
 	@echo "  make demo          - Start end-to-end continuous virtual time demo with Glass Cockpit"
+	@echo "  make run-ui        - Start Streamlit mobility console (UI only) on port 8501"
 	@echo "  make demo-stop     - Stop demo streaming, replay, dashboard, and API"
 	@echo "  make demo-status   - Check status of components, virtual time, and telemetry"
 	@echo "  make test          - Run foundation, replay, streaming, and observability tests"
@@ -85,6 +86,8 @@ demo: check-prereqs demo-stop
 		AWS_SECRET_ACCESS_KEY=$$(grep AWS_SECRET_ACCESS_KEY .env | cut -d= -f2) \
 		URBANFLOW_HISTORICAL_PATH=s3a://urbanflow/gold/historical_zone_baseline/ \
 		URBANFLOW_LIVE_PATH=s3a://urbanflow/gold/live_zone_metrics/live_demo/ \
+		URBANFLOW_SPEEDUP=$(SPEEDUP) \
+		SPEEDUP=$(SPEEDUP) \
 		PYTHONPATH=urbanflow-streaming \
 		./urbanflow-streaming/.venv/bin/streamlit run urbanflow-streaming/analytics_app/app.py \
 		--server.port $(STREAMLIT_PORT) \
@@ -109,6 +112,30 @@ demo: check-prereqs demo-stop
 	@echo "Check status: make demo-status"
 	@echo "Stop demo:    make demo-stop"
 	@echo "=================================================================="
+
+run-ui:
+	@echo "==> Starting Streamlit mobility analytics dashboard (UI only) on port $(STREAMLIT_PORT)..."
+	@fuser -k $(STREAMLIT_PORT)/tcp 2>/dev/null || true
+	@setsid env \
+		URBANFLOW_S3_ENDPOINT=http://localhost:8333 \
+		AWS_ACCESS_KEY_ID=$$(grep AWS_ACCESS_KEY_ID .env | cut -d= -f2) \
+		AWS_SECRET_ACCESS_KEY=$$(grep AWS_SECRET_ACCESS_KEY .env | cut -d= -f2) \
+		URBANFLOW_HISTORICAL_PATH=s3a://urbanflow/gold/historical_zone_baseline/ \
+		URBANFLOW_LIVE_PATH=s3a://urbanflow/gold/live_zone_metrics/live_demo/ \
+		URBANFLOW_SPEEDUP=$(SPEEDUP) \
+		SPEEDUP=$(SPEEDUP) \
+		PYTHONPATH=urbanflow-streaming \
+		./urbanflow-streaming/.venv/bin/streamlit run urbanflow-streaming/analytics_app/app.py \
+		--server.port $(STREAMLIT_PORT) \
+		--server.headless true > /tmp/urbanflow-streamlit.log 2>&1 < /dev/null &
+	@for i in $$(seq 1 10); do \
+		if curl -s -f http://localhost:$(STREAMLIT_PORT)/_stcore/health >/dev/null 2>&1; then \
+			lsof -i :$(STREAMLIT_PORT) -t > .streamlit.pid 2>/dev/null || true; \
+			echo "   Streamlit dashboard is ready at http://localhost:$(STREAMLIT_PORT)"; \
+			break; \
+		fi; \
+		sleep 1; \
+	done
 
 demo-stop:
 	@echo "==> Stopping demo components..."
