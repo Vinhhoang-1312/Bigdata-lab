@@ -10,13 +10,15 @@ from pathlib import Path
 
 from pyspark.sql import SparkSession, functions as F
 
+from batch.io import read_zone_lookup
 from batch.schemas import SILVER_FIELDS
 from batch.validation import assert_silver_contract
 
+ROOT = Path(__file__).resolve().parents[2]
 EXPECTED_PATH = (
-    Path(__file__).resolve().parents[2]
-    / "urbanflow-foundation/fixtures/silver/expected_silver_from_bronze.jsonl"
+    ROOT / "urbanflow-foundation/fixtures/silver/expected_silver_from_bronze.jsonl"
 )
+ZONE_LOOKUP_PATH = ROOT / "urbanflow-foundation/fixtures/bronze/zone_lookup.csv"
 TIMESTAMP_OUTPUT_PATTERN = "yyyy-MM-dd'T'HH:mm:ssXXX"
 FLOAT_FIELDS = {
     "trip_distance",
@@ -40,8 +42,9 @@ def main() -> None:
     spark = SparkSession.builder.appName("Verify Batch Fixture S3 Output").getOrCreate()
     spark.sparkContext.setLogLevel("WARN")
 
+    zones = read_zone_lookup(spark, str(ZONE_LOOKUP_PATH))
     silver = spark.read.parquet(args.silver_path).select(*SILVER_FIELDS)
-    assert_silver_contract(silver)
+    assert_silver_contract(silver, zones)
     actual = [
         row.asDict(recursive=True)
         for row in silver.select(
@@ -57,13 +60,15 @@ def main() -> None:
     with EXPECTED_PATH.open(encoding="utf-8") as handle:
         expected = [json.loads(line) for line in handle if line.strip()]
 
-    key = lambda row: (
-        row["pickup_datetime"],
-        row["dropoff_datetime"],
-        row["pickup_zone_id"],
-    )
-    actual.sort(key=key)
-    expected.sort(key=key)
+    def sort_key(row: dict) -> tuple:
+        return (
+            row["pickup_datetime"],
+            row["dropoff_datetime"],
+            row["pickup_zone_id"],
+        )
+
+    actual.sort(key=sort_key)
+    expected.sort(key=sort_key)
     assert len(actual) == len(expected) == 10
     for actual_row, expected_row in zip(actual, expected, strict=True):
         assert actual_row.keys() == expected_row.keys()

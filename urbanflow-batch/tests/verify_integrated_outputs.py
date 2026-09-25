@@ -6,11 +6,13 @@ from __future__ import annotations
 from pyspark.sql import SparkSession, functions as F
 
 from batch.baseline_validation import assert_historical_baseline_contract
+from batch.io import read_zone_lookup
 from batch.schemas import HISTORICAL_BASELINE_FIELDS, SILVER_FIELDS
 from batch.validation import assert_silver_contract
 
 SILVER_PATH = "s3a://urbanflow/silver/trips/"
 HISTORICAL_PATH = "s3a://urbanflow/gold/historical_zone_baseline/"
+ZONE_LOOKUP_PATH = "s3a://urbanflow/bronze/zone_lookup/"
 HISTORICAL_START = "2023-01-01"
 HISTORICAL_END = "2023-01-31"
 REPLAY_START = "2023-02-01"
@@ -22,8 +24,15 @@ def main() -> None:
     spark = SparkSession.builder.appName("Verify Integrated Batch Outputs").getOrCreate()
     spark.sparkContext.setLogLevel("WARN")
 
+    zones = read_zone_lookup(spark, ZONE_LOOKUP_PATH).cache()
+    expected_zone_count = (
+        zones.select(F.expr("try_cast(LocationID as int)").alias("zone_id"))
+        .where(F.col("zone_id").isNotNull())
+        .distinct()
+        .count()
+    )
     silver = spark.read.parquet(SILVER_PATH).select(*SILVER_FIELDS).cache()
-    assert_silver_contract(silver)
+    assert_silver_contract(silver, zones)
     silver_rows = silver.count()
     historical_silver = silver.where(
         F.to_date("pickup_datetime").between(HISTORICAL_START, HISTORICAL_END)
@@ -50,7 +59,11 @@ def main() -> None:
     baseline = spark.read.parquet(HISTORICAL_PATH).select(
         *HISTORICAL_BASELINE_FIELDS
     ).cache()
-    assert_historical_baseline_contract(baseline)
+    assert_historical_baseline_contract(
+        baseline,
+        expected_zone_count=expected_zone_count,
+        require_full_grid=True,
+    )
     baseline_rows = baseline.count()
     if baseline_rows == 0:
         raise AssertionError("Historical Gold is empty")
@@ -66,6 +79,7 @@ def main() -> None:
     print("INTEGRATED BATCH OUTPUTS = PASS")
 
     baseline.unpersist()
+    zones.unpersist()
     replay_silver.unpersist()
     silver.unpersist()
     spark.stop()

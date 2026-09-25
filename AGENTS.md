@@ -83,11 +83,11 @@ Sidebar navigation links with accurate port descriptors:
 
 ## One-Command Demo Lifecycle (`make demo`)
 
-UrbanFlow features an automated One-Command Demo orchestration for continuous ingestion, virtual time replay, streaming tumbling-window aggregations, and the Glass Cockpit observability plane.
+UrbanFlow features an automated One-Command Demo orchestration for finite historical ingestion, virtual-time replay, streaming tumbling-window aggregations, and the Glass Cockpit observability plane.
 
 Primary control commands:
 
-- `make demo` — Starts the complete stack (SeaweedFS, Kafka, Spark cluster, bucket and topic initialization, Spark Structured Streaming driver on port `4040`, virtual time replay producer at 60x acceleration in continuous loop mode, FastAPI observability service on port `8000`, and Streamlit dashboard on port `8501`).
+- `make demo` — Starts the complete stack (SeaweedFS, Kafka, Spark cluster, bucket and topic initialization, Spark Structured Streaming driver on port `4040`, the finite February virtual-time replay producer at 60x acceleration, FastAPI observability service on port `8000`, and Streamlit dashboard on port `8501`). The full replay lasts about 11.2 hours and preserves historical event timestamps exactly.
 - `make demo-status` — Queries live component health, FastAPI telemetry, Streamlit status, Spark heartbeat (`.telemetry/streaming_health.json`), Kafka partition backlogs, and virtual time replay clock.
 - `make demo-stop` — Cleanly and idempotently stops demo containers and reclaims host ports `8000` and `8501` without orphaned processes.
 - `make test` — Runs the end-to-end test suite across all subprojects (contract fixtures, replay serialization, streaming smoke, observability health state machine, and global chronological monotonicity scans).

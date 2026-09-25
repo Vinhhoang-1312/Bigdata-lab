@@ -6,7 +6,7 @@ This runbook documents the automated **One-Command Demo** lifecycle (`make demo`
 
 ## 1. Overview & Architecture
 
-The One-Command Demo provides a completely automated, reproducible environment to demonstrate the end-to-end continuous ingestion, streaming aggregations, virtual time replay, and the Glass Cockpit observability control plane.
+The One-Command Demo provides a completely automated, reproducible environment to demonstrate end-to-end finite historical replay, streaming aggregations, and the Glass Cockpit observability control plane.
 
 ```
                               ┌──────────────────────────────────────────────┐
@@ -21,7 +21,7 @@ The One-Command Demo provides a completely automated, reproducible environment t
 │   Virtual Time Replay     │         │ Spark Streaming│      │     │    Streamlit Dashboard     │
 │   (urbanflow-demo-replay) │         │ (local[2],:4040│      │     │       (Host Port 8501)     │
 │   Rate-controlled 60x     │         │ 5-min tumbling │      │     │  Interactive maps, metrics,│
-│   looping February 2023   │         │ window)        │      │     │  HUD Glass Cockpit panel   │
+│   finite February 2023    │         │ window)        │      │     │  HUD Glass Cockpit panel   │
 └─────────────┬─────────────┘         └──────▲─────────┘      │     └─────────────▲──────────────┘
               │                              │                │                   │
          (publishes)                    (consumes)            │                   │
@@ -52,7 +52,7 @@ The One-Command Demo provides a completely automated, reproducible environment t
    - **Apache Kafka**: 4-partition event streaming broker.
    - **Apache Spark Master & Worker**: Standalone cluster infrastructure (`spark://spark-master:7077`).
    - **Spark Streaming Driver (`urbanflow-demo-streaming`)**: Runs PySpark Structured Streaming with `--master 'local[2]'` and Web UI on port `4040`.
-   - **Virtual Time Replay Producer (`urbanflow-demo-replay`)**: Reads Silver Parquet directly via Arrow batches and streams rate-controlled events with monotonic virtual clock rebasing.
+   - **Virtual Time Replay Producer (`urbanflow-demo-replay`)**: Reads Silver Parquet directly via Arrow batches and emits the frozen February sequence once at a rate-controlled virtual-clock pace without changing historical event timestamps.
 
 2. **Detached Host Control & Presentation Plane**:
    - **FastAPI Observability Service**: Runs via `./urbanflow-streaming/.venv` on port `8000`. Exposes `/v1/streaming/health` and OpenAPI documentation at `/docs`.
@@ -120,7 +120,7 @@ This single command will:
 4. Run `bucket-init` to create the `urbanflow` S3 bucket.
 5. Run `kafka-topic-init` to create `urbanflow.trip-events` (4 partitions).
 6. Launch Spark Structured Streaming (`urbanflow-demo-streaming`) with tumbling-window aggregations.
-7. Launch the Virtual Time Replay Producer (`urbanflow-demo-replay`) at 60x acceleration with looping enabled.
+7. Launch the finite Virtual Time Replay Producer (`urbanflow-demo-replay`) at 60x acceleration. The full February sequence lasts approximately 11.2 hours and then exits cleanly.
 8. Start the FastAPI Observability Service on port `8000` as a detached daemon.
 9. Start the Streamlit Analytics Dashboard on port `8501` as a detached daemon.
 
@@ -215,7 +215,7 @@ This target runs:
 2. **`replay-check`**: Validates replay event mappers, rate controllers, and Kafka serializers.
 3. **`streaming-check`**: Runs an end-to-end smoke test reading Live Gold Parquet from SeaweedFS S3.
 4. **`observability-check`**: Runs pytest unit tests for the Glass Cockpit health state machine and FastAPI endpoints.
-5. **`verify_monotonic_virtual_time.py`**: Verifies virtual time monotonicity across multi-cycle replays, proportional time scaling, and burst limiting.
+5. **`verify_monotonic_virtual_time.py`**: Verifies that finite replay preserves historical event timestamps, proportional time scaling, and burst limiting.
 6. **`verify_feb_silver_monotonicity.py`**: Scans 100,000 rows of February 2023 Silver Parquet from S3 to verify strict global chronological ordering.
 
 ---

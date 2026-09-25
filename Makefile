@@ -1,4 +1,4 @@
-.PHONY: help demo demo-stop demo-status run-ui test foundation-check replay-check streaming-check observability-check check-prereqs
+.PHONY: help demo demo-stop demo-status run-ui test foundation-check batch-check replay-check streaming-check observability-check check-prereqs
 
 SPEEDUP ?= 60
 # MAX_RATE is optional; when unset, replay Python automatically computes max(500.0, 4.0 * SPEEDUP)
@@ -9,11 +9,11 @@ FASTAPI_PORT ?= 8000
 
 help:
 	@echo "UrbanFlow Control & Demo Lifecycle:"
-	@echo "  make demo          - Start end-to-end continuous virtual time demo with Glass Cockpit"
+	@echo "  make demo          - Start finite February virtual-time demo with Glass Cockpit"
 	@echo "  make run-ui        - Start Streamlit mobility console (UI only) on port 8501"
 	@echo "  make demo-stop     - Stop demo streaming, replay, dashboard, and API"
 	@echo "  make demo-status   - Check status of components, virtual time, and telemetry"
-	@echo "  make test          - Run foundation, replay, streaming, and observability tests"
+	@echo "  make test          - Run foundation, batch, replay, streaming, and observability tests"
 	@echo ""
 	@echo "Configuration options (override via make VAR=val):"
 	@echo "  SPEEDUP=$(SPEEDUP) (virtual acceleration factor, e.g. 60 or 300)"
@@ -53,13 +53,12 @@ demo: check-prereqs demo-stop
 		--master 'local[2]' \
 		/workspace/urbanflow-streaming/spark/live_trip_metrics.py \
 		--config /workspace/urbanflow-streaming/config/settings.integrated.yaml
-	@echo "==> 4. Launching Continuous Virtual Time Replay Producer ($(SPEEDUP)x acceleration, loop=on)..."
+	@echo "==> 4. Launching Virtual Time Replay Producer ($(SPEEDUP)x acceleration)..."
 	docker compose run -d --name urbanflow-demo-replay replay-python \
 		python /workspace/urbanflow-replay/producer/replay_trips.py \
 		--mode $(DEMO_MODE) \
 		--speedup $(SPEEDUP) \
-		$(if $(MAX_RATE),--max-rate $(MAX_RATE),) \
-		--loop
+		$(if $(MAX_RATE),--max-rate $(MAX_RATE),)
 	@echo "==> 5. Starting FastAPI Observability Service on port $(FASTAPI_PORT)..."
 	@setsid env \
 		URBANFLOW_S3_ENDPOINT=http://localhost:8333 \
@@ -102,13 +101,13 @@ demo: check-prereqs demo-stop
 	done
 	@echo ""
 	@echo "=================================================================="
-	@echo "UrbanFlow Continuous Demo & Glass Cockpit are RUNNING!"
+	@echo "UrbanFlow Finite Replay Demo & Glass Cockpit are RUNNING!"
 	@echo "Dashboard:    http://localhost:$(STREAMLIT_PORT)"
 	@echo "FastAPI API:  http://localhost:$(FASTAPI_PORT)/v1/streaming/health"
 	@echo "FastAPI Docs: http://localhost:$(FASTAPI_PORT)/docs"
 	@echo "Spark UI:     http://localhost:4040"
 	@echo "Speedup:      $(SPEEDUP)x (1 second wall clock = $(SPEEDUP) seconds virtual time)"
-	@echo "Replay Mode:  $(DEMO_MODE) (Continuous Monotonic Looping)"
+	@echo "Replay Mode:  $(DEMO_MODE) (Virtual Time Acceleration)"
 	@echo "Check status: make demo-status"
 	@echo "Stop demo:    make demo-stop"
 	@echo "=================================================================="
@@ -197,6 +196,14 @@ demo-status:
 foundation-check:
 	docker compose run --rm foundation-check
 
+batch-check:
+	docker compose run --rm spark-submit \
+		--master 'local[2]' \
+		/workspace/urbanflow-batch/tests/run_fixture_tests.py
+	docker compose run --rm spark-submit \
+		--master 'local[2]' \
+		/workspace/urbanflow-batch/tests/run_baseline_tests.py
+
 replay-check:
 	docker compose run --rm replay-python python /workspace/urbanflow-replay/tests/run_contract_tests.py
 
@@ -212,7 +219,7 @@ observability-check:
 		urbanflow-streaming/tests/test_observability.py \
 		urbanflow-streaming/tests/test_serving.py
 
-test: foundation-check replay-check streaming-check observability-check
+test: foundation-check batch-check replay-check streaming-check observability-check
 	python3 tests/verify_monotonic_virtual_time.py
 	AWS_ACCESS_KEY_ID=$$(grep AWS_ACCESS_KEY_ID .env | cut -d= -f2) \
 	AWS_SECRET_ACCESS_KEY=$$(grep AWS_SECRET_ACCESS_KEY .env | cut -d= -f2) \

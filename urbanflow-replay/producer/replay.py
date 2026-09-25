@@ -1,4 +1,4 @@
-"""Replay orchestration with proportional virtual clock acceleration and monotonic looping."""
+"""Finite replay orchestration with proportional virtual-clock acceleration."""
 
 from __future__ import annotations
 
@@ -6,11 +6,11 @@ import json
 import sys
 import time
 from collections.abc import Callable, Iterable, Iterator
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any, Protocol
 
 from producer.event_mapper import EventMapper
-from producer.event_time import NYC, parse_event_time
+from producer.event_time import parse_event_time
 from producer.event_validator import EventValidator
 from producer.kafka_producer import KafkaEventProducer
 from producer.producer_metrics import ProducerMetrics
@@ -24,66 +24,34 @@ class ProducerLike(Protocol):
     def flush(self, timeout: float = 30.0) -> int: ...
 
 
-def rebased_record_stream(
+def record_stream(
     records: Iterable[dict[str, Any]] | Callable[[], Iterable[dict[str, Any]]],
-    loop: bool = False,
-) -> Iterator[tuple[int, dict[str, Any], datetime, str]]:
-    """Yields (cycle, record_dict, virtual_dt, orig_time_str) with strictly monotonic rebasing.
+) -> Iterator[tuple[dict[str, Any], datetime, str]]:
+    """Yield each source record once without changing its historical event time.
 
-    Supports re-scanning factories or in-memory sequences to maintain bounded-memory
-    batch streaming during continuous looping across millions of events without
-    materializing the full dataset in Python memory.
+    Replay requires chronological input for proportional pacing and fails visibly
+    rather than silently reordering or rebasing canonical Silver records.
     """
-    min_dt: datetime | None = None
-    max_dt: datetime | None = None
-
     if callable(records):
-        cycle0_iter = records()
-        get_next_cycle: Callable[[], Iterable[dict[str, Any]]] | None = records
-        fallback_cache = None
+        source = records()
     elif isinstance(records, (list, tuple)):
-        sorted_list = sorted(records, key=lambda r: str(r.get("pickup_datetime", "")))
-        cycle0_iter = sorted_list
-        get_next_cycle = lambda: sorted_list
-        fallback_cache = None
+        source = sorted(
+            records,
+            key=lambda record: parse_event_time(record["pickup_datetime"]),
+        )
     else:
-        cycle0_iter = records
-        fallback_cache = [] if loop else None
-        get_next_cycle = None
-
-    for r in cycle0_iter:
-        orig_str = r["pickup_datetime"]
-        orig_dt = parse_event_time(orig_str)
-        if min_dt is None or orig_dt < min_dt:
-            min_dt = orig_dt
-        if max_dt is None or orig_dt > max_dt:
-            max_dt = orig_dt
-        if fallback_cache is not None:
-            fallback_cache.append(r)
-        yield 0, r, orig_dt, orig_str
-
-    if not loop or min_dt is None or max_dt is None:
-        return
-
-    span = max(timedelta(seconds=1), max_dt - min_dt)
-    boundary = timedelta(minutes=1) if span >= timedelta(minutes=1) else timedelta(seconds=1)
-    cycle_span = span + boundary
-
-    if get_next_cycle is None:
-        assert fallback_cache is not None
-        get_next_cycle = lambda: fallback_cache
-
-    cycle = 1
-    while True:
-        offset = cycle * cycle_span
-        for orig_r in get_next_cycle():
-            orig_str = orig_r["pickup_datetime"]
-            orig_dt = parse_event_time(orig_str)
-            virtual_dt = (orig_dt + offset).astimezone(NYC)
-            new_r = dict(orig_r)
-            new_r["pickup_datetime"] = virtual_dt.isoformat()
-            yield cycle, new_r, virtual_dt, orig_str
-        cycle += 1
+        source = records
+    previous_event_time: datetime | None = None
+    for row_number, record in enumerate(source, start=1):
+        original_time = record["pickup_datetime"]
+        event_time = parse_event_time(original_time)
+        if previous_event_time is not None and event_time < previous_event_time:
+            raise ValueError(
+                f"Monotonicity violation at row {row_number}: event time "
+                f"{original_time} precedes {previous_event_time.isoformat()}"
+            )
+        previous_event_time = event_time
+        yield record, event_time, original_time
 
 
 def replay_records(
@@ -94,7 +62,6 @@ def replay_records(
     rate: float | None = None,
     speedup: float | None = None,
     max_rate: float | None = None,
-    loop: bool = False,
     max_events: int | None = None,
     dry_run: bool = False,
     print_events: int = 0,
@@ -141,7 +108,7 @@ def replay_records(
     last_log_wall = time.perf_counter()
 
     try:
-        for cycle, record, virtual_dt, orig_time_str in rebased_record_stream(records, loop=loop):
+        for record, virtual_dt, orig_time_str in record_stream(records):
             metrics.records_read += 1
             try:
                 event = mapper.map_record(record)
@@ -181,8 +148,8 @@ def replay_records(
                 effective_rate = metrics.records_sent / elapsed
                 speedup_label = f"{speedup:.1f}x" if speedup is not None else "fixed"
                 print(
-                    f"[REPLAY] cycle={cycle} orig_time={orig_time_str} "
-                    f"virtual_time={event['event_time']} speedup={speedup_label} "
+                    f"[REPLAY] event_time={orig_time_str} "
+                    f"speedup={speedup_label} "
                     f"rate={effective_rate:.1f}eps total_sent={metrics.records_sent}",
                     flush=True,
                 )

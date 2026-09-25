@@ -51,7 +51,7 @@ def main() -> None:
         starts.append(TopicPartition(config.topic, partition_id, high))
     consumer.assign(starts)
 
-    source = iter_fixture(config.fixture_path)
+    source = list(iter_fixture(config.fixture_path))
     metrics, interrupted = replay_records(
         source,
         topic=config.topic,

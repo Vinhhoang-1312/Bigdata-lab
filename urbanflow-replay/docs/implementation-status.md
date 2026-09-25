@@ -22,10 +22,10 @@
 - [x] Batch Silver → Replay → Kafka boundary test without an ad-hoc adapter.
 - [x] Measured 100, 500, 1,000, 2,500, and 5,000 event/sec runs.
 
-## Deferred cross-subproject acceptance
+## Cross-subproject acceptance
 
-- [ ] Replay Kafka events → Streaming without an integration-only adapter.
-- [ ] Kafka → Spark Structured Streaming acceptance Test G.
+- [ ] Full Replay CLI → Kafka → Streaming Live Gold acceptance without an integration-only adapter.
+- [x] Kafka → Spark Structured Streaming acceptance Test G using the authoritative Foundation event shape.
 - [ ] Final end-to-end Velocity experiment with Streaming active.
 
 Replay is ready to provide fixture or canonical February events to Streaming.

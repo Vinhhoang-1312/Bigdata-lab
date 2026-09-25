@@ -25,13 +25,13 @@
 - [x] Batch canonical February Silver → Replay → Kafka without an ad-hoc
   boundary adapter.
 
-## Deferred cross-subproject acceptance
+## Cross-subproject acceptance
 
-These are integration gates, not unfinished independent Batch implementation:
+These are integration gates:
 
-- [ ] Batch canonical Historical Gold → Streaming without an adapter.
-- [ ] Complete environment lock with Streaming runtime details.
-- [ ] Final end-to-end integration acceptance.
+- [x] Batch canonical Historical Gold → Streaming without an adapter.
+- [x] Complete environment lock with Streaming runtime details.
+- [ ] Final end-to-end integration acceptance (latest recorded end-to-end verifier result is `FAIL`).
 
 Replay now consumes Batch's canonical February Silver partition directly and
 publishes Foundation-compliant Kafka events.

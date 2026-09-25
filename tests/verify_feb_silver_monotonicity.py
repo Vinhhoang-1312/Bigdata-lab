@@ -19,8 +19,8 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "urbanflow-replay"))
 
-from producer.config import load_config
-from producer.input_reader import iter_integrated
+from producer.config import load_config  # noqa: E402
+from producer.input_reader import iter_integrated  # noqa: E402
 
 
 def get_current_rss_mb() -> float:
