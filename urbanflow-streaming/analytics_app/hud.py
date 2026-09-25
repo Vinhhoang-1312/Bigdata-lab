@@ -22,12 +22,12 @@ from observability.watermark import build_watermark_status
 
 def status_badge(state: str) -> str:
     badges = {
-        "HEALTHY": "🟢 :green[**HEALTHY**]",
-        "DEGRADED": "🟡 :orange[**DEGRADED**]",
-        "STALE": "🟠 :orange[**STALE**]",
-        "UNAVAILABLE": "🔴 :red[**UNAVAILABLE**]",
+        "HEALTHY": ":material/check_circle: :green[**HEALTHY**]",
+        "DEGRADED": ":material/warning: :orange[**DEGRADED**]",
+        "STALE": ":material/history: :orange[**STALE**]",
+        "UNAVAILABLE": ":material/error: :red[**UNAVAILABLE**]",
     }
-    return badges.get(state, f"⚪ **{state}**")
+    return badges.get(state, f":material/help: **{state}**")
 
 
 @st.cache_data(ttl=600)
