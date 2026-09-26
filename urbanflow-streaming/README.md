@@ -126,47 +126,18 @@ Do not delete the checkpoint between restarts, reuse it for another query, or
 place it inside Gold. The historical loader automatically reads fixture JSONL
 or integrated Parquet and validates the Foundation schema in both modes.
 
-## React UI and legacy Streamlit analytics
+## React UI
 
 The primary Streaming workspace is `http://127.0.0.1:5173/streaming` after
-starting `streaming-api` and Vite as described in the root README. Streamlit is
-retained as a diagnostic comparison, not the primary interface.
+running `start-urbanflow.bat` from the repository root. The old Streamlit UI is
+archived and is no longer started or supported as a user-facing interface. Its
+source remains in `analytics_app/` because the API still reuses selected
+data-access modules. See [the archive note](docs/archive/streamlit-ui.md).
 The current configured Gold path is a bounded February 2023 replay. The
 Reliability view now reads Spark Master's active-app list and reports whether
 `UrbanFlowLiveMetrics` is running. This check is separate from Kafka lag and
 invalid-record telemetry, which are still unavailable. See the
 [release-readiness report](../docs/release-readiness-2026-09-25.md).
-
-Fixture data is the default:
-
-```bash
-streamlit run analytics_app/app.py
-```
-
-Integrated data is selected by paths only; the app remains a thin Gold reader:
-
-```bash
-export URBANFLOW_HISTORICAL_PATH=s3://urbanflow/gold/historical_zone_baseline/
-export URBANFLOW_LIVE_PATH=s3://urbanflow/gold/live_zone_metrics/
-streamlit run analytics_app/app.py
-```
-
-For SeaweedFS, configure the S3-compatible endpoint. The integrated profile
-automatically uses the complete taxi-zone lookup in Bronze; use
-`URBANFLOW_ZONE_LOOKUP_PATH` only to override it.
-
-```bash
-export URBANFLOW_S3_ENDPOINT=http://seaweedfs:8333
-streamlit run analytics_app/app.py
-```
-
-The app includes overview KPIs, current-versus-historical charts, zone/date
-filters, a zone explorer, unusual-zone ranking, and Live/Historical tables.
-It does not auto-refresh the page: a browser refresh is the explicit action
-that reads a new Gold snapshot. The first view selects at most 12 active zones
-from the latest global window so charts and controls remain readable. Historical
-Gold is not sent to the browser until **Load historical sample** is selected;
-the displayed sample is capped at 1,000 matching rows.
 
 ## Read-only Streaming API
 

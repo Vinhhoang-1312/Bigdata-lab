@@ -1,18 +1,17 @@
 # UrbanFlow — Big Data Analytics Demo
 
-## React UI (Streaming and ML)
+## One-command React UI (Streaming and ML)
 
-Start Docker Desktop, then from the repository root:
+Start Docker Desktop, then run this file from the repository root:
 
 ```powershell
-docker compose up -d seaweedfs spark-master spark-worker-1 spark-worker-2 streaming-api ml-api
-cd urbanflow-ui
-npm ci --cache D:\UrbanFlow-npm-cache
-npm run dev
+.\start-urbanflow.bat
 ```
 
-In another terminal, open `http://127.0.0.1:5173/streaming` and
-`http://127.0.0.1:5173/ml`. Streaming has Dispatch and Reliability views;
+The launcher starts storage, Spark, both read-only APIs, and the React app. It
+then opens `http://127.0.0.1:5173/streaming`,
+`http://127.0.0.1:5173/ml`, and the Spark UI at `http://127.0.0.1:8080`.
+Streaming has Dispatch and Reliability views;
 ML has Forecast and Evidence views. Viewpoints have direct URLs and survive
 browser reload/Back. The current Gold is a February 2023 replay, not current
 city traffic; the Spark streaming job is stopped. ML inference is research-only:
@@ -25,21 +24,13 @@ before presenting this as a product.
 
 Docker Desktop's data disk on this machine is currently on **C:**, not D:.
 Do not download or train on large new datasets until its storage location is
-moved and verified. The npm cache command above uses D.
+moved and verified. The launcher keeps the npm download cache on D:.
 
-## Legacy Streamlit quick start
+## Archived Streamlit UI
 
-Start Docker Desktop, then run these commands from the project root:
-
-```powershell
-docker-compose up -d seaweedfs spark-master spark-worker-1 spark-worker-2
-docker start urbanflow-streamlit
-Start-Process http://127.0.0.1:8501
-Start-Process http://127.0.0.1:8080
-```
-
-- `http://127.0.0.1:8501` — Streaming analytics UI.
-- `http://127.0.0.1:8080` — Spark distributed-runtime UI (not the ML prediction UI).
+The old Streamlit UI on port `8501` is archived and is not started by the
+launcher. Its source is retained only for history and shared data-access code.
+See [the archive note](urbanflow-streaming/docs/archive/streamlit-ui.md).
 
 A teaching demo of one full Big Data pipeline, built on public
 [**NYC TLC taxi-trip records (https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page)**](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page).
