@@ -22,8 +22,8 @@ export default function ZoneMap({ geometry, rows, selectedZone, onSelect }: {
       center: [-73.96, 40.74], zoom: 10.0,
       style: {
         version: 8,
-        sources: { streets: { type: 'raster', tiles: ['https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png'], tileSize: 256, attribution: '© OpenStreetMap contributors · CARTO' } },
-        layers: [{ id: 'streets', type: 'raster', source: 'streets' }],
+        sources: {},
+        layers: [{ id: 'base', type: 'background', paint: { 'background-color': '#e7eff1' } }],
       },
     })
     map.current = instance

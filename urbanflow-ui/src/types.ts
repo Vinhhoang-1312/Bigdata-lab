@@ -85,3 +85,37 @@ export type Evidence = {
   missing_evidence: string[]
   limitations: string[]
 }
+
+export type TripAnomaly = {
+  rank: number
+  pickup_at: string
+  pickup_zone_id: number
+  dropoff_zone_id: number
+  trip_distance_miles: number
+  trip_duration_minutes: number
+  fare_amount_usd: number
+  score: number
+  reason: string
+}
+
+export type TripAnomalySnapshot = {
+  status: 'PASS'
+  run_id: string
+  method: 'spark_mllib_kmeans'
+  training_period: string
+  calibration_period: string
+  screening_period: string
+  sample_fraction: number
+  training_sample_count: number
+  calibration_sample_count: number
+  screened_sample_count: number
+  flagged_sample_count: number
+  reported_count: number
+  threshold: number
+  threshold_percentile: number
+  cluster_count: number
+  spark_worker_hosts: string[]
+  source_uri: string
+  trips: TripAnomaly[]
+  limitations: string[]
+}

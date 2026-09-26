@@ -1,5 +1,36 @@
 # UrbanFlow ML: Du Bao Nhu Cau Taxi Theo Zone
 
+## Trip anomaly review (Spark MLlib)
+
+The React ML Explore workspace has an **Unusual trips** mode at
+`http://127.0.0.1:5173/ml/anomalies`. It shows the highest-scoring February
+2023 trip records from a reproducible 2% Silver sample, with pickup and
+dropoff taxi zones on a local polygon map. The line joins approximate zone
+centers; Silver does not contain the vehicle's GPS route.
+
+`spark/train_trip_anomalies.py` fits Spark MLlib K-means on November 2022
+Silver trips, calibrates a 99.5th-percentile review threshold on January 2023,
+then screens a disjoint February 2023 sample. The four features are log-scaled
+distance, duration, fare and average speed, standardized using the training
+sample. A score is Euclidean distance from the assigned learned center. It is
+not a probability of fraud. No verified anomaly labels exist, so precision,
+recall and classification accuracy cannot be reported. High scores can reveal
+bad trip records as well as genuinely unusual travel patterns; a person must
+review each case.
+
+Run on the two Spark workers from the repository root:
+
+```powershell
+docker compose run --rm spark-submit --master spark://spark-master:7077 --total-executor-cores 2 --executor-cores 1 --executor-memory 768m /workspace/urbanflow-ml/spark/train_trip_anomalies.py --resume
+```
+
+The completed artifact is
+`s3a://urbanflow/dev/ml/anomaly/runs/trip-anomaly-20260926-001/result.json`.
+`--resume` reads the completed artifact if it exists; an interrupted run with
+no completed artifact starts again. The UI reads the small artifact through
+`ml-api` and does not scan Silver on every page load. See the
+[run report](docs/results/trip-anomalies-20260926.md).
+
 ## React forecast workspace
 
 The experimental forecast and evidence UI is `http://127.0.0.1:5173/ml`

@@ -5,6 +5,8 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 from ml_serving.model_store import get_model_store
+from ml_serving.trip_anomalies import DEFAULT_RUN_ID, load_anomaly_snapshot
+import os
 
 
 class ForecastRequest(BaseModel):
@@ -36,6 +38,13 @@ def create_app() -> FastAPI:
             return _store().forecast(request.zone_id, request.forecast_at)
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @app.get("/v1/anomaly/trips")
+    def anomaly_trips() -> dict:
+        try:
+            return load_anomaly_snapshot(os.getenv("URBANFLOW_TRIP_ANOMALY_RUN_ID", DEFAULT_RUN_ID))
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="Trip anomaly artifact is unavailable") from exc
 
     return app
 

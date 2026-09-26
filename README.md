@@ -12,7 +12,9 @@ The launcher starts storage, Spark, both read-only APIs, and the React app. It
 then opens `http://127.0.0.1:5173/streaming`,
 `http://127.0.0.1:5173/ml`, and the Spark UI at `http://127.0.0.1:8080`.
 Streaming has Dispatch and Reliability views;
-ML has Forecast and Evidence views. Viewpoints have direct URLs and survive
+ML has Explore and Evidence views. Explore contains Demand forecast and
+Unusual trips; the latter has a taxi-zone map and a bounded Spark MLlib
+anomaly review sample at `http://127.0.0.1:5173/ml/anomalies`. Viewpoints have direct URLs and survive
 browser reload/Back. The current Gold is a February 2023 replay, not current
 city traffic; the Spark streaming job is stopped. ML inference is research-only:
 raw held-out GTQN WAPE is 69.1% error, while a simple same-time-last-week
@@ -25,6 +27,10 @@ before presenting this as a product.
 Docker Desktop's data disk on this machine is currently on **C:**, not D:.
 Do not download or train on large new datasets until its storage location is
 moved and verified. The launcher keeps the npm download cache on D:.
+
+The maps use the locally stored NYC TLC taxi-zone polygons. They do not need a
+CARTO API key or a remote tile server. A selected unusual trip shows its pickup
+and dropoff zones; the connecting line is not a GPS route.
 
 ## Archived Streamlit UI
 

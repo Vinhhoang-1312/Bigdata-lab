@@ -5,7 +5,7 @@ import MachineLearning from './MachineLearning'
 
 type Workspace = 'streaming' | 'ml'
 type StreamView = 'dispatch' | 'reliability'
-type ModelView = 'forecast' | 'evidence'
+type ModelView = 'forecast' | 'anomalies' | 'evidence'
 type Route = { workspace: Workspace; streamView: StreamView; modelView: ModelView }
 
 function currentRoute(): Route {
@@ -13,13 +13,13 @@ function currentRoute(): Route {
   return {
     workspace: path.startsWith('/ml') ? 'ml' : 'streaming',
     streamView: path === '/streaming/reliability' ? 'reliability' : 'dispatch',
-    modelView: path === '/ml/evidence' ? 'evidence' : 'forecast',
+    modelView: path === '/ml/evidence' ? 'evidence' : path === '/ml/anomalies' ? 'anomalies' : 'forecast',
   }
 }
 
 function routePath(route: Route): string {
   if (route.workspace === 'streaming') return route.streamView === 'dispatch' ? '/streaming' : '/streaming/reliability'
-  return route.modelView === 'forecast' ? '/ml' : '/ml/evidence'
+  return route.modelView === 'evidence' ? '/ml/evidence' : route.modelView === 'anomalies' ? '/ml/anomalies' : '/ml'
 }
 
 export default function App() {
@@ -54,12 +54,12 @@ export default function App() {
           <button className={streamView === 'dispatch' ? 'active' : ''} onClick={() => navigate({ ...route, streamView: 'dispatch' })}><MapPinned size={17} /><span><b>Dispatch</b><small>Demand by zone</small></span>{streamView === 'dispatch' && <ChevronRight size={16} />}</button>
           <button className={streamView === 'reliability' ? 'active' : ''} onClick={() => navigate({ ...route, streamView: 'reliability' })}><ShieldCheck size={17} /><span><b>Reliability</b><small>Trust the data</small></span>{streamView === 'reliability' && <ChevronRight size={16} />}</button>
         </nav> : <nav className="view-nav" aria-label="Machine learning viewpoint">
-          <button className={modelView === 'forecast' ? 'active' : ''} onClick={() => navigate({ ...route, modelView: 'forecast' })}><BarChart3 size={17} /><span><b>Forecast</b><small>Next 30 minutes</small></span>{modelView === 'forecast' && <ChevronRight size={16} />}</button>
+          <button className={modelView !== 'evidence' ? 'active' : ''} onClick={() => navigate({ ...route, modelView: 'forecast' })}><BarChart3 size={17} /><span><b>Explore</b><small>Demand & trips</small></span>{modelView !== 'evidence' && <ChevronRight size={16} />}</button>
           <button className={modelView === 'evidence' ? 'active' : ''} onClick={() => navigate({ ...route, modelView: 'evidence' })}><Database size={17} /><span><b>Evidence</b><small>Quality and limits</small></span>{modelView === 'evidence' && <ChevronRight size={16} />}</button>
         </nav>}
         <div className="sidebar-footer"><span className="footer-rule" />NYC TLC taxi zones<br />Research and teaching build</div>
       </aside>
-      <main id="main-content">{workspace === 'streaming' ? <Streaming viewpoint={streamView} /> : <MachineLearning viewpoint={modelView} />}</main>
+      <main id="main-content">{workspace === 'streaming' ? <Streaming viewpoint={streamView} /> : <MachineLearning viewpoint={modelView} onViewChange={view => navigate({ ...route, workspace: 'ml', modelView: view })} />}</main>
     </div>
   </div>
 }

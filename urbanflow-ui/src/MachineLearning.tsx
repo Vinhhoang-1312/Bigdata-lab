@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Alert, Button, Empty, Select, Spin, Tag, Tooltip } from 'antd'
+import { Alert, Button, Empty, Segmented, Select, Spin, Tag, Tooltip } from 'antd'
 import { ArrowRight, Cpu, RefreshCw, Search, ShieldCheck, TriangleAlert } from 'lucide-react'
 import { postForecast, useResource } from './api'
 import { formatCount, wapeLabel } from './format'
 import type { Evidence, Forecast, ForecastOptions } from './types'
+import TripAnomalies from './TripAnomalies'
 
 function metricNumber(value: string | number | undefined): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null
@@ -54,7 +55,7 @@ function ForecastResult({ result, name }: { result: Forecast; name: string }) {
   </section>
 }
 
-export default function MachineLearning({ viewpoint }: { viewpoint: 'forecast' | 'evidence' }) {
+export default function MachineLearning({ viewpoint, onViewChange }: { viewpoint: 'forecast' | 'anomalies' | 'evidence'; onViewChange: (view: 'forecast' | 'anomalies' | 'evidence') => void }) {
   const options = useResource<ForecastOptions>('ml-options', '/v1/forecast/options')
   const evidence = useResource<Evidence>('ml-evidence-v2', '/v1/forecast/evidence')
   const [zone, setZone] = useState<number | null>(null)
@@ -81,6 +82,8 @@ export default function MachineLearning({ viewpoint }: { viewpoint: 'forecast' |
   }
 
   return <div className="workspace-content">
+    {viewpoint !== 'evidence' && <Segmented className="ml-mode-switch" value={viewpoint} onChange={value => onViewChange(value as 'forecast' | 'anomalies')} options={[{ label: 'Demand forecast', value: 'forecast' }, { label: 'Unusual trips', value: 'anomalies' }]} />}
+    {viewpoint === 'anomalies' ? <><div className="page-heading"><div><span className="eyebrow">Machine learning / Trip review</span><h1>Unusual taxi trips</h1><p>Review trips whose distance, duration, fare or speed differs from learned patterns.</p></div></div><TripAnomalies /></> : <>
     <div className="page-heading"><div><span className="eyebrow">Machine learning / {viewpoint === 'forecast' ? 'Forecast' : 'Evidence'}</span><h1>{viewpoint === 'forecast' ? 'Pickup demand forecast' : 'Model evidence'}</h1><p>{viewpoint === 'forecast' ? 'Estimate pickups in a selected taxi zone for a 30-minute window.' : 'Separate what the distributed experiment proved from what it has not proved.'}</p></div>
       <Tooltip title="Re-read model artifact and evidence"><Button icon={<RefreshCw size={16} />} onClick={() => { void options.refresh(); void evidence.refresh() }} loading={options.loading || evidence.loading}>Refresh</Button></Tooltip>
     </div>
@@ -99,5 +102,6 @@ export default function MachineLearning({ viewpoint }: { viewpoint: 'forecast' |
       </div></div>
     </>}
     {options.savedAt && <div className="fetch-note">Model information read at {new Date(options.savedAt).toLocaleString()} · Refresh is manual</div>}
+    </>}
   </div>
 }
