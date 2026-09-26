@@ -28,9 +28,13 @@ Docker Desktop's data disk on this machine is currently on **C:**, not D:.
 Do not download or train on large new datasets until its storage location is
 moved and verified. The launcher keeps the npm download cache on D:.
 
-The maps use the locally stored NYC TLC taxi-zone polygons. They do not need a
-CARTO API key or a remote tile server. A selected unusual trip shows its pickup
-and dropoff zones; the connecting line is not a GPS route.
+Both maps use the CARTO Positron vector basemap for streets and place names,
+with locally stored NYC TLC taxi-zone polygons and UrbanFlow data on top. If
+CARTO tiles cannot load, the maps switch to a local background and keep the
+taxi-zone overlays visible. The Positron basemap does not use the optional
+`CARTO_ACCESS_TOKEN` in `.env`; that token is reserved for future CARTO
+Maps/Data API calls. A selected unusual trip shows its pickup and dropoff
+zones; the connecting line is not a GPS route.
 
 ## Archived Streamlit UI
 

@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import maplibregl, { type GeoJSONSource, type Map as MapLibreMap } from 'maplibre-gl'
 import type { TripAnomaly } from './types'
+import { CARTO_POSITRON_STYLE, fallBackToLocalBasemap, firstLabelLayer } from './basemap'
+import MapFocusButton from './MapFocusButton'
 
 type Feature = { type: 'Feature'; properties: Record<string, unknown>; geometry: unknown }
 export type ZoneGeometry = { type: 'FeatureCollection'; features: Feature[] }
@@ -38,6 +40,19 @@ function selectedRoute(geometry: ZoneGeometry, trip: TripAnomaly | null) {
   ] }
 }
 
+function focusRoute(instance: MapLibreMap, route: ReturnType<typeof selectedRoute>) {
+  const line = route.features[0] as { geometry?: { coordinates?: number[][] } } | undefined
+  const ends = line?.geometry?.coordinates
+  if (ends?.length !== 2) return
+  if (ends[0][0] === ends[1][0] && ends[0][1] === ends[1][1]) {
+    instance.jumpTo({ center: ends[0] as [number, number], zoom: 11 })
+  } else {
+    const southwest: [number, number] = [Math.min(ends[0][0], ends[1][0]), Math.min(ends[0][1], ends[1][1])]
+    const northeast: [number, number] = [Math.max(ends[0][0], ends[1][0]), Math.max(ends[0][1], ends[1][1])]
+    instance.fitBounds([southwest, northeast], { padding: 65, maxZoom: 11, duration: 0 })
+  }
+}
+
 export default function TripAnomalyMap({ geometry, trips, selected, onSelect }: {
   geometry: ZoneGeometry
   trips: TripAnomaly[]
@@ -49,6 +64,8 @@ export default function TripAnomalyMap({ geometry, trips, selected, onSelect }: 
   const onSelectRef = useRef(onSelect)
   const tripsRef = useRef(trips)
   const [ready, setReady] = useState(false)
+  const [localBasemap, setLocalBasemap] = useState(false)
+  const [zoom, setZoom] = useState<number | null>(null)
   onSelectRef.current = onSelect
   tripsRef.current = trips
 
@@ -56,17 +73,17 @@ export default function TripAnomalyMap({ geometry, trips, selected, onSelect }: 
     if (!container.current) return
     const instance = new maplibregl.Map({
       container: container.current, center: [-73.96, 40.74], zoom: 10,
-      style: { version: 8,
-        sources: {},
-        layers: [{ id: 'base', type: 'background', paint: { 'background-color': '#e7eff1' } }],
-      },
+      style: CARTO_POSITRON_STYLE,
     })
     map.current = instance
+    fallBackToLocalBasemap(instance, () => { setReady(false); setLocalBasemap(true) })
     instance.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right')
-    instance.on('load', () => {
+    instance.on('moveend', () => setZoom(instance.getZoom()))
+    let handlersAttached = false
+    instance.on('style.load', () => {
       instance.addSource('anomaly-zones', { type: 'geojson', data: geometry as never })
       instance.addLayer({ id: 'anomaly-zones-fill', type: 'fill', source: 'anomaly-zones',
-        paint: { 'fill-color': '#879b9d', 'fill-opacity': 0.13 } })
+        paint: { 'fill-color': '#879b9d', 'fill-opacity': 0.13 } }, firstLabelLayer(instance))
       instance.addLayer({ id: 'anomaly-zones-outline', type: 'line', source: 'anomaly-zones',
         paint: { 'line-color': '#789092', 'line-width': 0.65, 'line-opacity': 0.65 } })
       instance.addLayer({ id: 'anomaly-origin', type: 'fill', source: 'anomaly-zones',
@@ -83,11 +100,14 @@ export default function TripAnomalyMap({ geometry, trips, selected, onSelect }: 
         filter: ['!=', ['get', 'kind'], 'route'],
         paint: { 'circle-color': ['match', ['get', 'kind'], 'pickup', '#bd4544', '#d2a14e'],
           'circle-radius': ['match', ['get', 'kind'], 'pickup', 8, 5], 'circle-stroke-color': '#fff', 'circle-stroke-width': 1.5 } })
-      instance.on('click', 'anomaly-zones-fill', event => {
-        const id = Number(event.features?.[0]?.properties?.location_id)
-        const trip = tripsRef.current.find(item => item.pickup_zone_id === id || item.dropoff_zone_id === id)
-        if (trip) onSelectRef.current(trip.rank)
-      })
+      if (!handlersAttached) {
+        handlersAttached = true
+        instance.on('click', 'anomaly-zones-fill', event => {
+          const id = Number(event.features?.[0]?.properties?.location_id)
+          const trip = tripsRef.current.find(item => item.pickup_zone_id === id || item.dropoff_zone_id === id)
+          if (trip) onSelectRef.current(trip.rank)
+        })
+      }
       instance.once('idle', () => setReady(true))
     })
     return () => { instance.remove(); map.current = null }
@@ -95,25 +115,23 @@ export default function TripAnomalyMap({ geometry, trips, selected, onSelect }: 
 
   useEffect(() => {
     const instance = map.current
-    if (!instance || !instance.isStyleLoaded()) return
+    if (!instance || !instance.getSource('anomaly-route')) return
     instance.setFilter('anomaly-origin', ['==', ['get', 'location_id'], selected?.pickup_zone_id ?? -1])
     instance.setFilter('anomaly-destination', ['==', ['get', 'location_id'], selected?.dropoff_zone_id ?? -1])
     const route = selectedRoute(geometry, selected)
     ;(instance.getSource('anomaly-route') as GeoJSONSource).setData(route as never)
-    const line = route.features[0] as { geometry?: { coordinates?: number[][] } } | undefined
-    const ends = line?.geometry?.coordinates
-    if (ends?.length === 2) {
-      if (ends[0][0] === ends[1][0] && ends[0][1] === ends[1][1]) {
-        instance.jumpTo({ center: ends[0] as [number, number], zoom: 11 })
-      } else {
-        instance.fitBounds([ends[0] as [number, number], ends[1] as [number, number]],
-          { padding: 65, maxZoom: 11, duration: 0 })
-      }
-    }
+    focusRoute(instance, route)
+    setZoom(instance.getZoom())
   }, [geometry, selected, ready])
 
-  return <div className="zone-map-shell" data-ready={ready ? 'true' : 'false'}>
+  return <div className="zone-map-shell" data-ready={ready ? 'true' : 'false'} data-zoom={zoom?.toFixed(1)}>
     <div className="zone-map" ref={container} aria-label="Anomalous taxi trip pickup and dropoff zones" />
+    <MapFocusButton label="Focus selected trip" onClick={() => {
+      if (!map.current) return
+      focusRoute(map.current, selectedRoute(geometry, selected))
+      setZoom(map.current.getZoom())
+    }} />
+    {localBasemap && <div className="map-fallback" role="status">Base map unavailable. Showing taxi zones.</div>}
     {!ready && <div className="map-loading" role="status">Loading taxi-zone map…</div>}
   </div>
 }
