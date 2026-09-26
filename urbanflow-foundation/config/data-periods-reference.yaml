@@ -6,8 +6,7 @@
 # be used by Batch, Replay, Streaming integration tests, and the
 # demo documentation.
 #
-# Fill the <TO BE DETERMINED> fields after real data acquisition
-# (Gate 7) and data-split freeze (Gate 8).
+# Frozen after real data acquisition and inspection (Gates 7 and 8).
 
 foundation_version: "1.0.0"
 
@@ -19,21 +18,20 @@ invariant: |
 
 historical_period:
   description: "Period used by urbanflow-batch to build the historical Gold baseline."
-  start_date: "<TO BE DETERMINED after data acquisition>"
-  end_date: "<TO BE DETERMINED after data acquisition>"
-  example: "2023-01-01 to 2024-12-31"
+  start_date: "2023-01-01"
+  end_date: "2023-01-31"
 
 replay_period:
   description: "Held-out period used by urbanflow-replay to produce Kafka events."
-  start_date: "<TO BE DETERMINED after data acquisition>"
-  end_date: "<TO BE DETERMINED after data acquisition>"
-  example: "2025-01-01 to 2025-01-31"
+  start_date: "2023-02-01"
+  end_date: "2023-02-28"
 
 notes: |
-  The exact dates depend on the NYC taxi source data actually acquired.
-  Once selected, record and freeze them here.
-  The fixture data uses a representative replay date of 2025-01-06
-  (Monday) for the reference expected-result calculations.
+  The periods were frozen after both monthly NYC TLC files were acquired,
+  inspected, and processed through the Silver contract. They do not overlap.
+  January establishes historical behavior; February is held out for replay.
+  The small Foundation fixture remains an independent deterministic scenario
+  dated 2025-01-06 and does not redefine these integrated real-data periods.
 
 source_data:
   description: "Public NYC TLC Trip Record Data. No account required."

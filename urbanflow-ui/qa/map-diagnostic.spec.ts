@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-test('streaming map renders CARTO streets behind taxi-zone data', async ({ page }, testInfo) => {
+test('streaming map uses CARTO when available and keeps taxi zones usable offline', async ({ page }, testInfo) => {
   const issues: string[] = []
   const cartoResponses: string[] = []
   page.on('console', message => { if (message.type() === 'error') issues.push(`${message.text()} @ ${message.location().url}`) })
@@ -17,9 +17,14 @@ test('streaming map renders CARTO streets behind taxi-zone data', async ({ page 
   console.log('MAP_DIAGNOSTIC', JSON.stringify({ info, issues }))
   await page.screenshot({ path: testInfo.outputPath('map-after-4s.png') })
   expect(info.width).toBeGreaterThan(100)
-  expect(cartoResponses.some(url => url.includes('style.json'))).toBe(true)
-  expect(cartoResponses.some(url => url.includes('.mvt'))).toBe(true)
-  expect(issues).toEqual([])
+  if (cartoResponses.length) {
+    expect(cartoResponses.some(url => url.includes('style.json'))).toBe(true)
+    expect(cartoResponses.some(url => url.includes('.mvt'))).toBe(true)
+    expect(issues.filter(issue => !issue.includes('cartocdn.com'))).toEqual([])
+  } else {
+    await expect(page.getByText('Base map unavailable. Showing taxi zones.')).toBeVisible()
+    expect(issues.some(issue => issue.includes('cartocdn.com'))).toBe(true)
+  }
 })
 
 test('anomaly map keeps trip zones visible when CARTO is unavailable', async ({ page }, testInfo) => {

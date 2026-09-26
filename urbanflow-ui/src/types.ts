@@ -19,6 +19,17 @@ export type StreamingOverview = {
   latest_rows: ZoneRow[]
 }
 
+export type ReplayCatalog = {
+  timezone: 'America/New_York'
+  months: {
+    month: string
+    windows: string[]
+    window_count: number
+    observed_day_count: number
+    hourly_pickups: number[]
+  }[]
+}
+
 export type StreamingHealth = {
   status: 'available' | 'degraded' | 'empty'
   gold_source_uri: string

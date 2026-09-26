@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Alert, Button, Empty, Select, Spin, Table, Tag, Tooltip } from 'antd'
+import { Alert, Button, Empty, Segmented, Select, Spin, Table, Tag, Tooltip } from 'antd'
 import { RefreshCw, Database, Radio, ShieldCheck, ShieldAlert } from 'lucide-react'
 import ReactECharts from 'echarts-for-react'
 import { useResource } from './api'
 import { formatCount, formatRatio, newYorkWindow, sourceLabel } from './format'
 import type { StreamingHealth, StreamingOverview, ZoneRow } from './types'
 import ZoneMap from './ZoneMap'
+import ReplayPlayback from './ReplayPlayback'
 
 type GeoJson = { type: 'FeatureCollection'; features: { type: 'Feature'; properties: Record<string, unknown>; geometry: unknown }[] }
 
@@ -37,7 +38,10 @@ export default function Streaming({ viewpoint }: { viewpoint: 'dispatch' | 'reli
   const health = useResource<StreamingHealth>('stream-health-v3', '/v1/streaming/health')
   const zones = useResource<GeoJson>('stream-zones', '/v1/streaming/zones')
   const [selectedZone, setSelectedZone] = useState<number | null>(null)
-  const data = overview.data
+  const [mode, setMode] = useState<'snapshot' | 'playback'>('snapshot')
+  const [playbackFrame, setPlaybackFrame] = useState<StreamingOverview | null>(null)
+  const [refreshTick, setRefreshTick] = useState(0)
+  const data = mode === 'playback' && viewpoint === 'dispatch' ? playbackFrame : overview.data
   useEffect(() => {
     if (data?.latest_rows.length && selectedZone == null) setSelectedZone(data.latest_rows[0].pickup_zone_id)
   }, [data, selectedZone])
@@ -51,13 +55,18 @@ export default function Streaming({ viewpoint }: { viewpoint: 'dispatch' | 'reli
         <h1>{viewpoint === 'dispatch' ? 'Taxi demand by zone' : 'Pipeline reliability'}</h1>
         <p>{viewpoint === 'dispatch' ? 'See where pickups differ from the historical baseline.' : 'Check when this snapshot was produced and what can be verified.'}</p>
       </div>
-      <Tooltip title="Read the latest Gold snapshot"><Button icon={<RefreshCw size={16} />} onClick={() => { void overview.refresh(true); void health.refresh(true) }} loading={overview.loading || health.loading}>Refresh</Button></Tooltip>
+      <Tooltip title="Read the latest Gold snapshot"><Button icon={<RefreshCw size={16} />} onClick={() => { void overview.refresh(true); void health.refresh(true); setRefreshTick(value => value + 1) }} loading={overview.loading || health.loading}>Refresh</Button></Tooltip>
     </div>
+
+    {viewpoint === 'dispatch' && <Segmented className="stream-mode-switch" value={mode}
+      onChange={value => { setMode(value as 'snapshot' | 'playback'); if (value === 'snapshot') setPlaybackFrame(null) }}
+      options={[{ label: 'Snapshot', value: 'snapshot' }, { label: 'Playback', value: 'playback' }]} />}
+    {viewpoint === 'dispatch' && mode === 'playback' && <ReplayPlayback onFrameChange={setPlaybackFrame} refreshTick={refreshTick} />}
 
     {(overview.error || health.error) && <Alert type="warning" showIcon message="Source unavailable" description={`${overview.error ?? health.error}. ${data ? 'Showing the last cached snapshot with its original time.' : 'No snapshot is available.'}`} />}
     {data && <div className={`source-strip ${isReplay ? 'replay' : ''}`}><span className="source-dot" /><strong>{sourceLabel(data.source_mode)}</strong><span>{dateLabel}</span><span className="source-detail">5-minute Gold window · America/New_York</span></div>}
 
-    {!data && overview.loading ? <div className="loading-space"><Spin tip="Reading Gold snapshot" size="large"><div /></Spin></div> : !data || data.status === 'empty' ? <Empty description="No Gold window has been produced yet" /> : viewpoint === 'dispatch' ? <>
+    {!data && overview.loading ? <div className="loading-space"><Spin tip="Reading Gold snapshot" size="large"><div /></Spin></div> : mode === 'playback' && viewpoint === 'dispatch' ? null : !data || data.status === 'empty' ? <Empty description="No Gold window has been produced yet" /> : viewpoint === 'dispatch' ? <>
       <div className="metrics-band">
         <Metric label="Pickups in window" value={formatCount(data.current_trip_count)} />
         <Metric label="Zones with pickups" value={formatCount(data.latest_rows.length)} />

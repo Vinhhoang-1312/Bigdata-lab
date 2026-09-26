@@ -1,0 +1,10 @@
+foundation_version: "1.0.0"
+analytics_timezone: "America/New_York"
+
+source_trips_path: "/workspace/urbanflow-foundation/fixtures/bronze/source_trips.csv"
+source_trips_format: "csv"
+zone_lookup_path: "/workspace/urbanflow-foundation/fixtures/bronze/zone_lookup.csv"
+
+silver_output_path: "s3a://urbanflow/dev/batch/silver/trips/"
+rejected_output_path: "s3a://urbanflow/dev/batch/rejected/trips/"
+write_mode: "overwrite"
