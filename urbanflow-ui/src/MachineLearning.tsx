@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Alert, Button, Empty, Segmented, Select, Spin, Tag, Tooltip } from 'antd'
+import { Alert, Button, Empty, Select, Spin, Tag, Tooltip } from 'antd'
 import { ArrowRight, Cpu, RefreshCw, Search, ShieldCheck, TriangleAlert } from 'lucide-react'
 import { postForecast, useResource } from './api'
 import { formatCount, wapeLabel } from './format'
@@ -55,7 +55,7 @@ function ForecastResult({ result, name }: { result: Forecast; name: string }) {
   </section>
 }
 
-export default function MachineLearning({ viewpoint, onViewChange }: { viewpoint: 'forecast' | 'anomalies' | 'evidence'; onViewChange: (view: 'forecast' | 'anomalies' | 'evidence') => void }) {
+export default function MachineLearning({ viewpoint }: { viewpoint: 'forecast' | 'kmeans' | 'information' }) {
   const options = useResource<ForecastOptions>('ml-options', '/v1/forecast/options')
   const evidence = useResource<Evidence>('ml-evidence-v2', '/v1/forecast/evidence')
   const [zone, setZone] = useState<number | null>(null)
@@ -82,13 +82,12 @@ export default function MachineLearning({ viewpoint, onViewChange }: { viewpoint
   }
 
   return <div className="workspace-content">
-    {viewpoint !== 'evidence' && <Segmented className="ml-mode-switch" value={viewpoint} onChange={value => onViewChange(value as 'forecast' | 'anomalies')} options={[{ label: 'Demand forecast', value: 'forecast' }, { label: 'Unusual trips', value: 'anomalies' }]} />}
-    {viewpoint === 'anomalies' ? <><div className="page-heading"><div><span className="eyebrow">Machine learning / Trip review</span><h1>Unusual taxi trips</h1><p>Review trips whose distance, duration, fare or speed differs from learned patterns.</p></div></div><TripAnomalies /></> : <>
-    <div className="page-heading"><div><span className="eyebrow">Machine learning / {viewpoint === 'forecast' ? 'Forecast' : 'Evidence'}</span><h1>{viewpoint === 'forecast' ? 'Pickup demand forecast' : 'Model evidence'}</h1><p>{viewpoint === 'forecast' ? 'Estimate pickups in a selected taxi zone for a 30-minute window.' : 'Separate what the distributed experiment proved from what it has not proved.'}</p></div>
+    {viewpoint === 'kmeans' ? <><div className="page-heading"><div><span className="eyebrow">Machine learning / K-means anomaly</span><h1>Unusual taxi trips</h1><p>Review trips whose distance, duration, fare or speed differs from learned patterns.</p></div></div><TripAnomalies /></> : viewpoint === 'information' ? <div className="page-heading"><div><span className="eyebrow">Machine learning / Training information</span><h1>Training information</h1><p>See the data policy, distributed training evidence and limits of both ML workflows.</p></div></div> : <>
+    <div className="page-heading"><div><span className="eyebrow">Machine learning / Forecast</span><h1>Pickup demand forecast</h1><p>Estimate pickups in a selected taxi zone for a 30-minute window.</p></div>
       <Tooltip title="Re-read model artifact and evidence"><Button icon={<RefreshCw size={16} />} onClick={() => { void options.refresh(); void evidence.refresh() }} loading={options.loading || evidence.loading}>Refresh</Button></Tooltip>
     </div>
     {(options.error || evidence.error) && <Alert type="warning" showIcon message="Model service unavailable" description={`${options.error ?? evidence.error}. ${options.data ? 'Showing cached model information.' : 'Start the ML API to use this workspace.'}`} />}
-    {viewpoint === 'evidence' ? evidence.data ? <EvidenceView evidence={evidence.data} /> : evidence.loading ? <div className="loading-space"><Spin size="large" /></div> : <Empty description="No model evidence available" /> : <>
+    <>
       <div className="source-strip replay"><span className="source-dot" /><strong>Experimental forecast</strong><span>February 2023 held-out period</span><span className="source-detail">New York time · 30-minute buckets</span></div>
       <div className="forecast-layout"><section className="forecast-form"><span className="eyebrow">Ask the model</span><h2>Where and when?</h2><p>Choose a pickup zone and a supported time. This model accepts trip history, not images or open-ended questions.</p>
         <label htmlFor="zone-select">Pickup zone</label><Select id="zone-select" showSearch optionFilterProp="label" aria-label="Pickup zone" className="full-control" value={zone} onChange={value => { setZone(value); setResult(null) }} options={options.data?.zones.map(item => ({ value: item.id, label: `${item.id} · ${item.name}` })) ?? []} placeholder="Select a zone" />
@@ -100,7 +99,7 @@ export default function MachineLearning({ viewpoint, onViewChange }: { viewpoint
       <div className="forecast-output">{forecastError && <Alert type="error" showIcon message="Forecast unavailable" description={forecastError} />}{result ? <ForecastResult result={result} name={selectedName} /> : <div className="forecast-empty"><span className="empty-icon"><Search size={29} /></span><h2>Ready to forecast</h2><p>Select a zone and time, then run the model. The output will show a central estimate and an uncertainty range.</p></div>}
         <div className="forecast-context"><span className="eyebrow">Research-only output</span><p>This is a historical February 2023 forecast, not a live prediction. GTQN test WAPE is {wapeLabel(metricNumber(evidence.data?.metrics?.wape))}; the weekly baseline is {wapeLabel(evidence.data?.baseline_comparison?.wape ?? null)}. The simpler method performs better, so do not use GTQN here for dispatch decisions.</p></div>
       </div></div>
-    </>}
+    </>
     {options.savedAt && <div className="fetch-note">Model information read at {new Date(options.savedAt).toLocaleString()} · Refresh is manual</div>}
     </>}
   </div>

@@ -37,3 +37,12 @@ class RobustZoneScaler:
         values = np.asarray(scaled, dtype=np.float32)
         restored = np.expm1(values * self.scale + self.center)
         return np.maximum(restored, 0.0).astype(np.float32)
+
+    def inverse_quantiles(self, scaled: np.ndarray) -> np.ndarray:
+        values = np.asarray(scaled, dtype=np.float32)
+        if values.ndim != 3 or values.shape[1] != self.center.shape[0] or values.shape[2] != 3:
+            raise ValueError("scaled quantiles must have shape [batch, zone, 3]")
+        center = self.center.reshape(1, -1, 1)
+        scale = self.scale.reshape(1, -1, 1)
+        restored = np.expm1(values * scale + center)
+        return np.maximum(restored, 0.0).astype(np.float32)

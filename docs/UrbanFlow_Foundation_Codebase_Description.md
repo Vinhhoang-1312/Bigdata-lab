@@ -104,7 +104,7 @@ The file also lists the frozen values that must not change without a Foundation 
 
 ### 4.2 Data Periods Reference
 
-`data-periods-reference.yaml` is a template for freezing the historical baseline period and the streaming replay period. The invariant — that the two periods must not overlap — preserves the analytical story: historical data represents "what normally happened before" and replay data represents "what is happening now." The exact dates are left as `<TO BE DETERMINED>` placeholders until real NYC taxi data is acquired and inspected. Once filled and frozen, the same period lock must be used by all subprojects and the demo documentation.
+`data-periods-reference.yaml` freezes the historical baseline period and the streaming replay period. The invariant — that the two periods must not overlap — preserves the analytical story: historical data represents "what normally happened before" and replay data represents "what is happening now." After real NYC taxi data was acquired and inspected, January 1–31, 2023 was frozen as the historical period and February 1–28, 2023 as the held-out replay period. The same period lock must be used by all subprojects and the demo documentation.
 
 The real data is the public **NYC TLC Trip Record Data** (Yellow-taxi monthly Parquet: `https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_YYYY-MM.parquet`; landing page <https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page>), plus the taxi-zone lookup CSV (`https://d37ci6vzurychx.cloudfront.net/misc/taxi_zone_lookup.csv`) and taxi-zone boundaries. The full link list lives in the `urbanflow-batch` subproject guide (§1.3, §3.1) and Gate 7 of the development guide.
 

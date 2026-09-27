@@ -19,6 +19,7 @@ docker compose up -d --build
 docker compose run --rm foundation-check
 docker compose run --rm spark-submit
 docker compose run --rm aws
+docker compose run --rm kafka-cli
 ```
 
 Expected Spark/S3A output:
@@ -42,6 +43,7 @@ Compose-managed `spark-ivy` named volume. Later runs reuse them.
 | SeaweedFS S3 | `http://seaweedfs:8333` inside Docker; http://localhost:8333 on host |
 | SeaweedFS filer | http://localhost:8888 |
 | SeaweedFS master | http://localhost:9333 |
+| Kafka | `kafka:9092` inside Docker; `localhost:9094` on host |
 
 Inside containers, always use Compose service names rather than `localhost`.
 
@@ -59,13 +61,26 @@ Inspect status and logs:
 docker compose ps
 docker compose logs -f spark-master spark-worker-1 spark-worker-2
 docker compose logs -f seaweedfs
+docker compose logs -f kafka
 ```
+
+Download the frozen Batch source months with containerized Python 3.13:
+
+```bash
+docker compose run --rm batch-python
+```
+
+The source directory is a separate host bind mount. Set
+`URBANFLOW_SOURCE_DIR` in `.env` to an absolute path with enough free space;
+this Windows setup defaults to `D:/UrbanFlow/nyc-tlc`. Spark reads the same
+files from `/workspace/local-data/nyc-tlc` without copying them into the
+repository checkout.
 
 Run local Spark validation:
 
 ```bash
 docker compose run --rm spark-submit \
-  --master 'local[2]' /workspace/docker/spark/local_smoke_test.py
+  --master 'local[2]' /workspace/tests/infrastructure/spark_local_smoke.py
 ```
 
 Run a job on the two-worker cluster:
@@ -75,7 +90,7 @@ docker compose run --rm spark-submit \
   --master spark://spark-master:7077 \
   --executor-memory 512m \
   --total-executor-cores 4 \
-  /workspace/docker/spark/local_smoke_test.py
+  /workspace/tests/infrastructure/spark_local_smoke.py
 ```
 
 Run the Spark/SeaweedFS Parquet round trip:
@@ -88,6 +103,21 @@ List S3 buckets:
 
 ```bash
 docker compose run --rm aws
+```
+
+Describe the canonical Kafka topic:
+
+```bash
+docker compose run --rm kafka-cli
+```
+
+Run Replay's Python contract and Kafka integration tests:
+
+```bash
+docker compose run --rm replay-python \
+  python /workspace/urbanflow-replay/tests/run_contract_tests.py
+docker compose run --rm replay-python \
+  python /workspace/urbanflow-replay/tests/run_kafka_integration.py
 ```
 
 Stop services while preserving data:
@@ -112,7 +142,10 @@ docker compose down --volumes
 - `hadoop-aws`: 3.5.0
 - AWS SDK bundle resolved by Hadoop: 2.35.4
 - SeaweedFS: 4.45
-- Foundation Python: 3.13.11
+- Foundation and Replay Python: 3.13.11
+- Kafka: 3.9.1, single-broker KRaft
+- `confluent-kafka` / librdkafka: 2.15.0 / 2.15.0
+- PyArrow: 25.0.1
 - AWS CLI: 2.36.40
 
 The Spark image currently supplies Python 3.10.12. This known difference from

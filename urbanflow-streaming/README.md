@@ -27,8 +27,8 @@ Kafka + Historical Gold -> Live Gold -> Analytics Application
   per-zone trip counts.
 - Join with the historical baseline to compute the **demand ratio**
   (current count / historical mean) and a nullable z-score.
-- A React workspace reads Live Gold through a thin FastAPI service; legacy
-  Streamlit remains available for comparison.
+- A React workspace reads Live Gold through a thin FastAPI service. Streamlit
+  is archived and is not a supported user-facing runtime.
 
 The Kafka event contract, historical/live Gold contracts, storage paths, time
 semantics, and null/join rules follow `urbanflow-foundation` 1.0.0.
@@ -59,7 +59,7 @@ profile needed by the process:
 python -m venv .venv && . .venv/bin/activate
 python -m pip install -r requirements/offline.txt   # PySpark, fixtures, tests
 python -m pip install -r requirements/streaming.txt # Kafka job Python side
-python -m pip install -r requirements/analytics.txt # Streamlit Gold reader
+python -m pip install -r requirements/analytics.txt # legacy data-access modules
 ```
 
 Kafka and S3A are JVM connectors, not Python wheels. Candidate compatible
@@ -138,6 +138,24 @@ Reliability view now reads Spark Master's active-app list and reports whether
 `UrbanFlowLiveMetrics` is running. This check is separate from Kafka lag and
 invalid-record telemetry, which are still unavailable. See the
 [release-readiness report](../docs/release-readiness-2026-09-25.md).
+
+### Monthly playback
+
+In **Streaming / Dispatch**, choose **Playback** to inspect a month as a map
+animation. The month selector, timeline, step controls, and Play/Pause button
+move only through completed five-minute windows that actually exist in Live
+Gold; missing windows are never presented as zero demand. The adjacent **Taxi
+pickups by hour** column chart groups the selected month by local
+`America/New_York` pickup hour. It is an operational exploration of stored
+Gold, not a claim that the replay is a current city feed.
+
+```text
+GET /v1/streaming/replay/catalog
+GET /v1/streaming/replay/frame?window_start=<RFC-3339 timestamp with offset>
+```
+
+The frame route rejects timestamps without an explicit offset and returns 404
+for a window absent from Gold, so the UI never silently fabricates a timeline.
 
 ## Read-only Streaming API
 

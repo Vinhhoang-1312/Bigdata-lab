@@ -34,6 +34,20 @@ def probabilistic_metrics(actual: np.ndarray, predictions: np.ndarray) -> dict[s
     return metrics
 
 
+def regression_metrics(actual: np.ndarray, predictions: np.ndarray) -> dict[str, float | None]:
+    actual_values, predicted_values = _validate(actual, predictions)
+    median = predicted_values[..., 1]
+    error = median - actual_values
+    actual_sum = float(actual_values.sum())
+    return {
+        "mae": float(np.abs(error).mean()),
+        "rmse": float(np.sqrt(np.square(error).mean())),
+        "wape": float(np.abs(error).sum() / actual_sum) if actual_sum > 0 else None,
+        "signed_bias": float(error.sum() / actual_sum) if actual_sum > 0 else None,
+        "clamp_rate": float((median < 0).mean()),
+    }
+
+
 def anomaly_candidates(actual: np.ndarray, predictions: np.ndarray) -> list[dict]:
     actual_values, predicted_values = _validate(actual, predictions)
     flat_actual = actual_values.reshape(-1)

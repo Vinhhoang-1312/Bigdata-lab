@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import type { TripScoreRequest, TripScoreResult } from './types'
 
 type Snapshot<T> = { value: T; savedAt: string }
 
@@ -43,4 +44,16 @@ export async function postForecast(zone_id: number, forecast_at: string): Promis
     throw new Error(typeof body.detail === 'string' ? body.detail : `Forecast service returned HTTP ${response.status}`)
   }
   return response.json()
+}
+
+export async function postTripScore(request: TripScoreRequest): Promise<TripScoreResult> {
+  const response = await fetch('/v1/anomaly/score', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  })
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({})) as { detail?: unknown }
+    throw new Error(typeof body.detail === 'string' ? body.detail : `Trip scoring service returned HTTP ${response.status}`)
+  }
+  return response.json() as Promise<TripScoreResult>
 }

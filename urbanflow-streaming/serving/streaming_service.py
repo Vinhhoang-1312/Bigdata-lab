@@ -53,6 +53,30 @@ def build_streaming_overview(
     }
 
 
+def build_replay_catalog(live: pd.DataFrame) -> dict[str, Any]:
+    """Index stored Gold windows by New York month without filling source gaps."""
+    if live.empty:
+        return {"timezone": "America/New_York", "months": []}
+    frame = live.loc[:, ["window_start", "current_trip_count"]].copy()
+    frame["window_start"] = pd.to_datetime(frame["window_start"], utc=True)
+    local = frame["window_start"].dt.tz_convert("America/New_York")
+    frame["month"] = local.dt.strftime("%Y-%m")
+    frame["date"] = local.dt.strftime("%Y-%m-%d")
+    frame["hour"] = local.dt.hour
+    months = []
+    for month, rows in frame.groupby("month", sort=True):
+        windows = sorted(timestamp.isoformat() for timestamp in rows["window_start"].unique())
+        hourly = rows.groupby("hour")["current_trip_count"].sum()
+        months.append({
+            "month": month,
+            "windows": windows,
+            "window_count": len(windows),
+            "observed_day_count": int(rows["date"].nunique()),
+            "hourly_pickups": [int(hourly.get(hour, 0)) for hour in range(24)],
+        })
+    return {"timezone": "America/New_York", "months": months}
+
+
 def build_streaming_health(
     reader: GoldReader,
     telemetry: dict[str, Any] | None,

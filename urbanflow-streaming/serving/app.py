@@ -15,7 +15,7 @@ from fastapi.responses import FileResponse
 from analytics_app.data_access import GoldReader
 from analytics_app.zones import load_zone_lookup
 from analytics_app.zones import GEOJSON_PATH
-from serving.streaming_service import build_streaming_health, build_streaming_overview
+from serving.streaming_service import build_replay_catalog, build_streaming_health, build_streaming_overview
 from serving.spark_status import read_stream_job_status
 
 T = TypeVar("T")
@@ -84,6 +84,33 @@ def create_app() -> FastAPI:
     @app.get("/v1/streaming/zones")
     def zones() -> FileResponse:
         return FileResponse(GEOJSON_PATH, media_type="application/geo+json")
+
+    @app.get("/v1/streaming/replay/catalog")
+    def replay_catalog(refresh: bool = False) -> dict:
+        reader = GoldReader(_required_path("URBANFLOW_HISTORICAL_PATH"), _required_path("URBANFLOW_LIVE_PATH"))
+        return read_gold_or_503(lambda: build_replay_catalog(read_live_snapshot(reader, refresh=refresh)))
+
+    @app.get("/v1/streaming/replay/frame")
+    def replay_frame(window_start: str, refresh: bool = False) -> dict:
+        try:
+            selected = datetime.fromisoformat(window_start)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail="Invalid window_start timestamp") from exc
+        if selected.tzinfo is None or selected.utcoffset() is None:
+            raise HTTPException(status_code=422, detail="window_start requires a UTC offset")
+        reader = GoldReader(_required_path("URBANFLOW_HISTORICAL_PATH"), _required_path("URBANFLOW_LIVE_PATH"))
+
+        def read_frame() -> dict:
+            live = read_live_snapshot(reader, refresh=refresh)
+            at = selected.astimezone(timezone.utc)
+            rows = live.loc[live["window_start"] == at]
+            if rows.empty:
+                raise HTTPException(status_code=404, detail="Gold window is not stored")
+            return build_streaming_overview(
+                reader, _lookup(_required_path("URBANFLOW_ZONE_LOOKUP_PATH")), live=rows,
+            )
+
+        return read_gold_or_503(read_frame)
 
     return app
 

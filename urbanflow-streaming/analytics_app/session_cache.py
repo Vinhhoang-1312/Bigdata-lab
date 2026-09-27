@@ -12,7 +12,7 @@ _SNAPSHOT_KEY = "urbanflow_gold_snapshot"
 
 def load_once_per_session(
     session: MutableMapping[str, object],
-    source_paths: tuple[str, str, str],
+    source_paths: str | tuple[str, ...],
     loader: Callable[[], T],
 ) -> T:
     """Return a stable Gold snapshot until its configured source changes."""

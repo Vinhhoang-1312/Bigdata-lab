@@ -24,9 +24,15 @@ diagnostic, not a final frozen benchmark. Pages read on entry or when Refresh
 is clicked, not on a timer. See [release readiness](docs/release-readiness-2026-09-25.md)
 before presenting this as a product.
 
-Docker Desktop's data disk on this machine is currently on **C:**, not D:.
-Do not download or train on large new datasets until its storage location is
-moved and verified. The launcher keeps the npm download cache on D:.
+In **Streaming / Dispatch**, choose **Playback** to play the selected month's
+actual completed five-minute Live Gold frames on the React map. Its hour chart
+shows pickup counts by `America/New_York` hour. Playback does not fill gaps
+with zeroes: a missing Gold frame remains visibly absent from the timeline.
+
+Monthly TLC source files are configured through `URBANFLOW_SOURCE_DIR` and are
+kept on **D:** on this workstation. Docker Desktop's engine data location is a
+separate setting: verify it before downloading or training on new large data.
+The launcher keeps the npm download cache on D:.
 
 Both maps use the CARTO Positron vector basemap for streets and place names,
 with locally stored NYC TLC taxi-zone polygons and UrbanFlow data on top. If
@@ -137,7 +143,8 @@ yellow_tripdata_YYYY-MM.parquet  one file per month, e.g. yellow_tripdata_2023-0
 ```
 
 Start small: 1–3 months (e.g. `2023-01` to `2023-03`) is enough to build and
-test the whole pipeline. History and replay must use **different** date ranges.
+test the whole pipeline. The frozen integrated split uses **January 2023 for
+history** and **February 2023 for replay**, so the ranges do not overlap.
 Usage details: [urbanflow-batch/README.md](urbanflow-batch/README.md) and
 `docs/UrbanFlow_urbanflow-batch_Subproject_Overview_Architecture_and_Development_Guide_2026-09-06.md`.
 
@@ -145,17 +152,19 @@ Usage details: [urbanflow-batch/README.md](urbanflow-batch/README.md) and
 
 ### Recommended: Docker Compose
 
-The reproducible development environment includes Python 3.13 for Foundation
-checks, Spark 4.2.0 with two workers, Hadoop S3A, SeaweedFS, and AWS CLI:
+The reproducible development environment includes Python 3.13, Spark 4.2.0
+with two workers, Hadoop S3A, SeaweedFS, Kafka 3.9.1, and AWS CLI:
 
 ```bash
 cp .env.example .env
 docker compose up -d --build
 docker compose run --rm foundation-check
 docker compose run --rm spark-submit
+docker compose run --rm kafka-cli
 ```
 
-Expect `FOUNDATION FIXTURES = PASS` and `WRITE/READ/DATA = PASS`. See
+Expect `FOUNDATION FIXTURES = PASS`, `WRITE/READ/DATA = PASS`, and a four-partition
+`urbanflow.trip-events` topic. See
 [docs/docker-environment.md](docs/docker-environment.md) for service addresses,
 version locks, cluster submission, logs, and shutdown commands.
 
@@ -196,27 +205,24 @@ Create the bucket (`urbanflow`, per
 aws s3api create-bucket --bucket urbanflow --endpoint-url http://localhost:8333
 ```
 
-The `4.45` tag is a candidate, not validated. Pin the tag that passes the
-Spark <-> SeaweedFS Parquet round-trip (acceptance test E) in
-`docs/environment-lock.md`, along with the Hadoop / `hadoop-aws` / AWS SDK
-versions. Keep credentials in environment variables (see
+The Compose environment locks the validated `4.45` tag and records it with the
+Hadoop / `hadoop-aws` / AWS SDK versions in `docs/environment-lock.md`. Keep
+credentials in environment variables (see
 `urbanflow-foundation/config/config-reference.yaml`), never in source.
 
-### 2. Kafka (Confluent Platform, WSL Ubuntu)
+### 2. Kafka
 
-Start the broker in KRaft mode, then create the topic:
+Compose starts the locked single-broker Kafka 3.9.1 KRaft service and creates
+the canonical topic idempotently:
 
 ```bash
-kafka-topics --create \
-  --topic urbanflow.trip-events \
-  --partitions 4 \
-  --replication-factor 1 \
-  --bootstrap-server localhost:9092
+docker compose up -d kafka kafka-topic-init
+docker compose run --rm kafka-cli
 ```
 
-Topic name, partitions and replication factor are frozen in
-`urbanflow-foundation/contracts/kafka-topic.yaml` — do not change them per
-machine. Record your broker start command in `docs/environment-lock.md`.
+Use `kafka:9092` from Compose containers and `localhost:9094` from the host.
+Topic name, partitions, and replication factor remain frozen in
+`urbanflow-foundation/contracts/kafka-topic.yaml`.
 
 ### 3. Record the environment lock
 

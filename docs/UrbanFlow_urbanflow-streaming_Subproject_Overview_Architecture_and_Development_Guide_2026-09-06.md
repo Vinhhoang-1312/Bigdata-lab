@@ -4,7 +4,7 @@
 **Date:** 2026-09-06  
 **Subproject:** C — Live Processing and Analytics Serving  
 **Foundation baseline:** `urbanflow-foundation` 1.0.0  
-**Primary technologies:** Apache Spark Structured Streaming, Kafka, SeaweedFS/S3A, Parquet, Streamlit  
+**Primary technologies:** Apache Spark Structured Streaming, Kafka, SeaweedFS/S3A, Parquet, FastAPI, React/MapLibre
 **Primary pipeline:** Kafka + Historical Gold → Live Gold → Analytics Application  
 **Document purpose:** Self-contained implementation and development guide for the `urbanflow-streaming` subproject.
 
@@ -100,7 +100,7 @@ and the historical Gold baseline (from `urbanflow-batch`), both derived from
 these sources; the taxi-zone lookup/GeoJSON is useful for labelling zones in the
 analytics app.
 
-The exact historical and replay periods are intentionally kept separate. The concrete dates should be frozen only after real source data is acquired and inspected.
+The integrated periods were frozen after real-data inspection: January 1–31, 2023 is historical, and February 1–28, 2023 is held out for replay. They do not overlap; the authoritative lock is `urbanflow-foundation/config/data-periods-reference.yaml`.
 
 ### 1.4 Overall architecture
 
@@ -140,7 +140,7 @@ The exact historical and replay periods are intentionally kept separate. The con
                          Live Gold metrics
                                  │
                                  ▼
-                     Streamlit / web analytics
+                     React web analytics
 ```
 
 ### 1.5 Technology roles
@@ -152,7 +152,7 @@ The exact historical and replay periods are intentionally kept separate. The con
 | SeaweedFS | Self-hosted S3-compatible object storage |
 | Hadoop S3A | Spark access to S3-compatible storage |
 | Parquet | Primary persistent analytical format |
-| Streamlit | Preferred lightweight analytics-serving layer |
+| React + MapLibre | Primary analytics workspace and map rendering |
 
 ### 1.6 Development organization and Foundation rule
 
@@ -201,7 +201,7 @@ historical comparison
       ↓
 Live Gold metrics
       ↓
-Streamlit / web analytics app
+React web analytics app
 ```
 
 ### 2.2 Why this subproject exists
@@ -368,7 +368,7 @@ Checkpoint data must remain separate from Gold analytics data.
    Live Gold Parquet
        │
        ▼
- Streamlit / web analytics app
+ React web analytics app
 ```
 
 ---
@@ -526,7 +526,9 @@ Consumer lag may be measured through Kafka-side tooling or another lightweight m
 
 ### 5.11 Analytics application
 
-The Streamlit/web application is a **thin consumer of Gold outputs**.
+The React web application is a **thin consumer of Gold outputs**. The archived
+Streamlit source is retained only for historical reference and shared data-access
+modules; it is not started by the supported launcher.
 
 It must not duplicate the ETL or stream-processing logic.
 

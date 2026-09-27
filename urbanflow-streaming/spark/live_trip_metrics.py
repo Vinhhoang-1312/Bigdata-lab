@@ -84,7 +84,11 @@ def _same_path(left: str, right: str) -> bool:
 
 
 def _is_local_path(path: str) -> bool:
-    return not urlparse(path).scheme
+    parsed = urlparse(path)
+    # urlparse treats a Windows drive letter (for example C:\\data) as a URI
+    # scheme. It is still a local path and must be protected like POSIX paths.
+    is_windows_drive = len(parsed.scheme) == 1 and len(path) > 1 and path[1] == ":"
+    return not parsed.scheme or is_windows_drive
 
 
 def _resolved(path: str) -> Path:

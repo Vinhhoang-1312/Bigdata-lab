@@ -50,7 +50,7 @@ def test_fixture_output_cannot_equal_foundation_fixture_path(monkeypatch):
 
     with pytest.raises(ValueError, match="Foundation fixture"):
         runner.validate_runtime_paths(
-            "../urbanflow-foundation/fixtures/gold/expected_live_zone_metrics.jsonl",
+            str(runner.FOUNDATION_FIXTURES / "gold" / "expected_live_zone_metrics.jsonl"),
             ".checkpoints/fixture-live-trip-metrics",
         )
 

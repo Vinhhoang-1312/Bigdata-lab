@@ -23,6 +23,7 @@ from forecasting.gtqn import GTQNLite
 from forecasting.scaling import RobustZoneScaler
 from forecasting.tensor_data import load_tensor_artifact
 from forecasting.weekly_naive_audit import weekly_naive_report
+from ml_serving.training_information import build_training_information
 
 NEW_YORK = ZoneInfo("America/New_York")
 DEFAULT_RUN_ID = "gtqn-20260917-001"
@@ -247,6 +248,21 @@ class ModelStore:
     def evidence(self) -> dict:
         return evidence_document(self.metrics, self.result, self.weekly_baseline,
                                  report_fingerprint_verified=self.report_fingerprint_verified)
+
+    def information(self, anomaly: dict | None, anomaly_error: str | None = None) -> dict:
+        training_evidence = {
+            **self.result,
+            "metrics": self.metrics,
+            "weekly_baseline": self.weekly_baseline,
+            "distribution": self.result.get("distribution", {}),
+        }
+        return build_training_information(
+            config=self.config,
+            metadata=self.metadata,
+            evidence=training_evidence,
+            anomaly=anomaly,
+            anomaly_error=anomaly_error,
+        )
 
 
 @lru_cache(maxsize=1)
