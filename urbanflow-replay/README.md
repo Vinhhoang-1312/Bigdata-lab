@@ -53,10 +53,17 @@ message keys, malformed-event exclusion, pacing, metrics, graceful flush,
 canonical topic metadata, generic consumption, and direct S3 Parquet input.
 Measured rates from 100 through 5,000 events/sec passed.
 
-The Kafka → Spark Foundation-event boundary is validated. Formal full Replay
-CLI → Kafka → Streaming Live Gold acceptance and the final streaming-active
-velocity experiment remain pending. See
-[`docs/implementation-status.md`](docs/implementation-status.md).
+The Kafka → Spark Foundation-event boundary and bounded full Replay CLI → Kafka
+→ Spark Structured Streaming → Live Gold acceptance are validated. On September
+14 and September 20, separate 10,000-event canonical Replay runs had zero
+invalid rows and zero mismatches against run-scoped Live Gold references (4,394
+and 2,863 rows respectively). Replay finished before each `availableNow` Spark
+query. The remaining cross-subproject gate is a rate-controlled velocity run
+while Streaming is actively consuming, with downstream progress and Gold
+correctness recorded. The prior producer-only rate tests do not satisfy that
+gate. These finite runs do not establish continuous production readiness. See
+[`docs/implementation-status.md`](docs/implementation-status.md) and the
+[Streaming results](../urbanflow-streaming/docs/results/end-to-end-streaming-health-20260920.md).
 
 ## Start and test
 
