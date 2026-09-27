@@ -296,7 +296,7 @@ services:
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:?Copy .env.example to .env}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:?Copy .env.example to .env}
       AWS_REGION: us-east-1
-      PYTHONPATH: /workspace/urbanflow-ml
+      PYTHONPATH: /opt/spark/python:/opt/spark/python/lib/py4j-0.10.9.9-src.zip:/workspace/urbanflow-ml
       URBANFLOW_S3_ENDPOINT: http://seaweedfs:8333
       URBANFLOW_ML_CONFIG: /workspace/urbanflow-ml/config/settings.example.yaml
       URBANFLOW_ML_RUN_ID: gtqn-20260917-001

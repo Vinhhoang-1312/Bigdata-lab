@@ -151,6 +151,12 @@ git commit -m "feat(ml): add artifact-compatible trip scoring"
 - Modify: `urbanflow-ml/ml_serving/app.py`
 - Modify: `urbanflow-ml/tests/test_trip_anomalies.py`
 - Modify: `urbanflow-ml/tests/test_serving.py`
+- Modify: `urbanflow-ml/forecasting/scaling.py`
+- Modify: `urbanflow-ml/forecasting/probabilistic_evaluation.py`
+- Modify: `urbanflow-ml/tests/test_scaling.py`
+- Modify: `urbanflow-ml/tests/test_probabilistic_evaluation.py`
+- Modify: `compose.yaml`
+- Modify: `docker/spark-ml/Dockerfile`
 
 **Interfaces:**
 - Consumes: pure functions from Task 1 and completed anomaly artifact fields
@@ -158,42 +164,42 @@ git commit -m "feat(ml): add artifact-compatible trip scoring"
   `run_id`, `method`.
 - Produces: `score_trip(snapshot: dict, *, distance_miles: float, duration_minutes: float, fare_usd: float) -> dict`, cached `get_anomaly_snapshot() -> dict`, and `POST /v1/anomaly/score` matching the spec.
 
-- [ ] **Step 1: Strengthen snapshot validation tests**
+- [x] **Step 1: Strengthen snapshot validation tests**
 
 Extend `test_trip_anomalies.py` with a complete four-feature fixture. Assert
 that inference metadata is accepted and missing/malformed scaler, center or
 threshold fields are rejected before scoring. Preserve the existing list API
 fixture test by testing list-scope validation separately if necessary.
 
-- [ ] **Step 2: Write score contract tests**
+- [x] **Step 2: Write score contract tests**
 
 Use a small deterministic artifact with two centers. Assert exact nearest
 cluster, Euclidean score, `score >= threshold` review decision, derived speed,
 reason, run ID, method, feature list and `research_only` status. Add a below-
 threshold case and an exact-threshold case; exact threshold must require review.
 
-- [ ] **Step 3: Write FastAPI boundary tests**
+- [x] **Step 3: Write FastAPI boundary tests**
 
 Test the endpoint function or FastAPI TestClient following the existing suite
 style. Assert valid request `200`, invalid numeric request `422`, unavailable
 artifact `503`, and that exception details do not expose credentials or S3
 internals.
 
-- [ ] **Step 4: Run focused tests and confirm RED**
+- [x] **Step 4: Run focused tests and confirm RED**
 
 ```powershell
 docker-compose --env-file "C:\Users\DELL\Documents\Big Data\.env" run --rm --no-deps --entrypoint /usr/bin/python3 ml-api -m unittest discover -s tests -p "test_trip_anomalies.py" -v
 docker-compose --env-file "C:\Users\DELL\Documents\Big Data\.env" run --rm --no-deps --entrypoint /usr/bin/python3 ml-api -m unittest discover -s tests -p "test_serving.py" -v
 ```
 
-- [ ] **Step 5: Implement cached snapshot and scoring**
+- [x] **Step 5: Implement cached snapshot and scoring**
 
 Add `@lru_cache(maxsize=1)` around the environment-selected completed snapshot.
 Both GET and POST must reuse it. The POST request Pydantic model has positive
 zone IDs, positive distance/duration and non-negative fare; also rely on Task 1
 for finite-number defense. Do not accept speed from the client.
 
-- [ ] **Step 6: Run focused and full backend unit tests**
+- [x] **Step 6: Run focused and full backend unit tests**
 
 ```powershell
 docker-compose --env-file "C:\Users\DELL\Documents\Big Data\.env" run --rm --no-deps --entrypoint /usr/bin/python3 ml-api -m unittest discover -s tests -v
@@ -201,7 +207,7 @@ docker-compose --env-file "C:\Users\DELL\Documents\Big Data\.env" run --rm --no-
 
 Expected: PASS; no Spark training job starts.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```powershell
 git add urbanflow-ml/ml_serving urbanflow-ml/tests/test_trip_anomalies.py urbanflow-ml/tests/test_serving.py
