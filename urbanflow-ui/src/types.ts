@@ -130,3 +130,99 @@ export type TripAnomalySnapshot = {
   trips: TripAnomaly[]
   limitations: string[]
 }
+
+export type TripScoreRequest = {
+  pickup_zone_id: number
+  dropoff_zone_id: number
+  trip_distance_miles: number
+  trip_duration_minutes: number
+  fare_amount_usd: number
+}
+
+export type TripScoreResult = {
+  run_id: string
+  method: 'spark_mllib_kmeans'
+  score: number
+  threshold: number
+  review_required: boolean
+  nearest_cluster: number
+  reason: string
+  derived_speed_mph: number
+  features_used: string[]
+  use_status: 'research_only'
+}
+
+export type Availability = 'available' | 'unavailable'
+
+export type TrainingTechnique = {
+  name: string
+  type: string
+  owner_ecosystem: string
+  purpose: string
+  how: string
+  alternative: string
+  limit: string
+}
+
+export type PreprocessingPolicy = {
+  input: string
+  policy: string
+  why: string
+  evidence: string
+}
+
+export type DemandTrainingInformation = {
+  availability: Availability
+  model_name: string | null
+  model_family: string | null
+  run_id: string | null
+  use_status: 'research_only'
+  benchmark_status: 'preliminary' | 'unavailable'
+  lookback_buckets: number | null
+  bucket_minutes: number | null
+  horizon_minutes: number | null
+  splits: Record<'train' | 'validation' | 'test', [string, string]>
+  zone_count: number | null
+  parameter_count: number | null
+  best_epoch: number | null
+  training_end_epoch: number | null
+  metrics: Record<string, number | string | null> | null
+  weekly_baseline: Record<string, number | string | null> | null
+  dataset_fingerprint_available: boolean
+  dataset_fingerprint_prefix: string | null
+  distributed_training: {
+    status: string
+    world_size: number | null
+    ranks: number[] | null
+    training_hosts: string[]
+    distinct_host_count: number | null
+    batches: number | null
+    parameter_checksums_match: boolean | null
+    parameter_checksum_prefixes: string[]
+  }
+}
+
+export type KmeansTrainingInformation = {
+  availability: Availability
+  error?: string
+  use_status: 'research_only'
+  run_id?: string
+  method?: 'spark_mllib_kmeans' | string
+  k?: number
+  threshold?: number
+  threshold_percentile?: number
+  periods?: Record<'training_period' | 'calibration_period' | 'screening_period', string | null>
+  sample_counts?: Record<'training_sample_count' | 'calibration_sample_count' | 'screened_sample_count', number | null>
+  features?: string[]
+  training_hosts?: string[]
+  limitations?: string[]
+}
+
+export type TrainingInformation = {
+  use_status: 'research_only'
+  demand_forecast: DemandTrainingInformation
+  kmeans_anomaly: KmeansTrainingInformation
+  preprocessing: PreprocessingPolicy[]
+  techniques: TrainingTechnique[]
+  limitations: string[]
+}

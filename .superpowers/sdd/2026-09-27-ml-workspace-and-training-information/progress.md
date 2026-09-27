@@ -29,3 +29,5 @@ Task 3: complete (uncommitted; focused builder/endpoint tests pass; full unittes
 Merge: complete (fetched origin/urbanflow-merge; merged new commits 69342ff and dd6fe0b as 4968789; preserved React/no-Streamlit files in conflicts; restored Task 4 work)
 
 Task 4: complete (uncommitted; TypeScript build pass; focused Playwright route tests 2/2 pass)
+
+Task 5: complete (uncommitted; Vitest 8/8 pass; TypeScript build pass)

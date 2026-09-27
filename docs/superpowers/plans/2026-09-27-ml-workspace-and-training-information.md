@@ -353,23 +353,23 @@ git commit -m "feat(ui): split ML into three workspaces"
   `postTripScore(request: TripScoreRequest): Promise<TripScoreResult>`, and the
   existing `useResource<TrainingInformation>` pattern for GET information.
 
-- [ ] **Step 1: Define exact TypeScript types**
+- [x] **Step 1: Define exact TypeScript types**
 
 Model optional/unavailable fields explicitly; do not use `any`. Include units
 in property names where the backend contract has units. Represent techniques
 and preprocessing rows as typed arrays rather than arbitrary records.
 
-- [ ] **Step 2: Write failing fetch tests**
+- [x] **Step 2: Write failing fetch tests**
 
 Mock `fetch` and assert `postTripScore` sends POST, JSON content type, exact body,
 returns typed success, and turns FastAPI `detail` into a readable `Error`.
 
-- [ ] **Step 3: Implement the API helper**
+- [x] **Step 3: Implement the API helper**
 
 Reuse the error parsing convention in existing `postForecast`; extract a small
 private helper only if it removes real duplication.
 
-- [ ] **Step 4: Run unit tests and build**
+- [x] **Step 4: Run unit tests and build**
 
 ```powershell
 cd urbanflow-ui
@@ -377,7 +377,7 @@ npm test
 npm run build
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add urbanflow-ui/src/types.ts urbanflow-ui/src/api.ts urbanflow-ui/src/mlContracts.test.ts
