@@ -236,6 +236,7 @@ urbanflow-streaming/analytics_app/data/taxi_zones_shp/
 
 # Cursor / agent local files (not part of the demo)
 .cursor/
+.superpowers/
 docs/superpowers/
 
 # Ruff stuff:
