@@ -19,9 +19,17 @@ evidence: urbanflow-streaming/docs/results/end-to-end-streaming-health-20260920.
 
 Interpretation: the Replay producer, Kafka topic, Spark Structured Streaming
 consumer, historical Gold join, SeaweedFS-backed Live Gold sink, and isolated
-checkpoint path work together correctly for a fresh 10,000-event run. This is
-a bounded integration proof, not a claim that a continuous production query is
-currently kept running.
+checkpoint path work together correctly for a fresh 10,000-event run. Together
+with the September 14 bounded run (10,000 events; 4,394 reference and live
+rows; zero invalid rows and mismatches), this closes Replay CLI → Kafka →
+Streaming Live Gold bounded acceptance without an integration-only adapter.
+Replay completed before each `availableNow` consumption. The only remaining
+Replay cross-subproject gate is the final rate-controlled velocity experiment
+with Streaming actively consuming during publication; the earlier producer-only
+rate measurements do not close it. See
+`urbanflow-replay/runbooks/run_velocity_experiment.md`. This is a bounded
+integration proof, not a claim that a continuous production query is currently
+kept running.
 
 Snapshot time: 2026-09-13 18:13:50 +07:00  
 Repository: `https://github.com/msa30dn/big-data-team-project`  
@@ -501,11 +509,14 @@ Replay implementation status from its own remote status file:
 - It can read canonical February Silver Parquet directly.
 - Batch Silver -> Replay -> Kafka boundary test is done.
 
-Deferred integration from Replay:
+Replay cross-subproject acceptance (updated from the September 13 snapshot):
 
-- Replay Kafka events -> Streaming without an integration-only adapter.
-- Kafka -> Spark Structured Streaming acceptance.
-- Final end-to-end Velocity experiment with Streaming active.
+- Bounded Replay CLI → Kafka → Spark Structured Streaming → Live Gold: PASS on
+  September 14 and September 20, without an integration-only adapter.
+- Kafka → Spark Structured Streaming Foundation-event boundary: PASS on
+  September 13.
+- Final end-to-end velocity experiment while Streaming is active during
+  publication: PENDING. Producer-only rate tests already passed.
 
 Output that matters for Streaming:
 
