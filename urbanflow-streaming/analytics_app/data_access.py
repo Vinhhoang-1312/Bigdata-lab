@@ -83,6 +83,36 @@ def chart_mode_for(frame: pd.DataFrame) -> str:
     return "line" if frame["window_start_local"].nunique() >= 2 else "grouped"
 
 
+def default_zone_ids(view: pd.DataFrame, limit: int = 12) -> list[int]:
+    """Pick the busiest zones from the latest global window for a readable first view."""
+    if view.empty or limit <= 0:
+        return []
+    latest = view[view["window_start_local"] == view["window_start_local"].max()]
+    ranked = latest.sort_values(
+        ["current_trip_count", "pickup_zone_id"],
+        ascending=[False, True],
+    ).drop_duplicates("pickup_zone_id")
+    return ranked["pickup_zone_id"].astype(int).head(limit).tolist()
+
+
+def prepare_historical_sample(
+    historical: pd.DataFrame,
+    lookup: pd.DataFrame,
+    selected_ids: list[int],
+    limit: int = 1_000,
+) -> tuple[pd.DataFrame, int]:
+    """Filter Historical Gold before joining names and cap the browser payload."""
+    filtered = (
+        historical[historical.pickup_zone_id.isin(selected_ids)].copy()
+        if selected_ids
+        else historical.iloc[0:0].copy()
+    )
+    total_rows = len(filtered)
+    named = lookup.loc[:, ["pickup_zone_id", "zone_name"]]
+    sample = filtered.head(max(limit, 0)).merge(named, on="pickup_zone_id", how="left")
+    return sample, total_rows
+
+
 def prepare_live_view(live: pd.DataFrame, lookup: pd.DataFrame) -> pd.DataFrame:
     view = live.copy()
     view["window_start_local"] = to_analytics_local(view["window_start"])

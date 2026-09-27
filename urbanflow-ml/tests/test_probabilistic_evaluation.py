@@ -38,6 +38,18 @@ class ProbabilisticEvaluationTest(unittest.TestCase):
         self.assertIsNone(metrics["wape"])
         self.assertIsNone(metrics["signed_bias"])
 
+    def test_regression_metrics_use_p50_in_original_trip_count_units(self):
+        actual = np.array([0.0, 10.0, 20.0], dtype=np.float32)
+        predictions = np.array(
+            [[0.0, 2.0, 4.0], [7.0, 8.0, 10.0], [18.0, 25.0, 30.0]],
+            dtype=np.float32,
+        )
+        metrics = regression_metrics(actual, predictions)
+        self.assertAlmostEqual(metrics["mae"], 3.0)
+        self.assertAlmostEqual(metrics["rmse"], np.sqrt(11.0))
+        self.assertAlmostEqual(metrics["wape"], 0.3)
+        self.assertAlmostEqual(metrics["signed_bias"], 1.0 / 6.0)
+
     def test_metrics_match_hand_calculated_coverage_and_width(self):
         actual = np.array([5.0, 10.0], dtype=np.float32)
         predictions = np.array([[4.0, 5.0, 7.0], [8.0, 9.0, 11.0]], dtype=np.float32)

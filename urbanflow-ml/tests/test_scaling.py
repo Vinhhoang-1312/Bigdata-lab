@@ -34,14 +34,24 @@ class RobustZoneScalerTest(unittest.TestCase):
 
         self.assertNotEqual(float(train_scaler.center[0]), float(leaked_scaler.center[0]))
 
+    def test_inverse_quantiles_broadcasts_over_time_and_quantile_axes(self):
+        scaler = RobustZoneScaler(
+            center=np.array([0.0, np.log(2.0)], dtype=np.float32),
+            scale=np.array([1.0, 1.0], dtype=np.float32),
+        )
+        scaled = np.zeros((2, 2, 3), dtype=np.float32)
+
+        restored = scaler.inverse_quantiles(scaled)
+
+        np.testing.assert_allclose(restored[:, 0], 0.0)
+        np.testing.assert_allclose(restored[:, 1], 1.0)
+
     def test_inverse_quantiles_scales_zone_axis_and_preserves_quantile_axis(self):
         scaler = RobustZoneScaler(
             center=np.array([0.0, 1.0], dtype=np.float32),
             scale=np.array([1.0, 2.0], dtype=np.float32),
         )
-
         restored = scaler.inverse_quantiles(np.zeros((1, 2, 3), dtype=np.float32))
-
         self.assertEqual((1, 2, 3), restored.shape)
         np.testing.assert_allclose(restored[0, 0], [0.0, 0.0, 0.0])
         np.testing.assert_allclose(restored[0, 1], [np.expm1(1.0)] * 3)

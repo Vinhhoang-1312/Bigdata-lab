@@ -65,6 +65,7 @@ test('ML forecast and information are distinct, with measured uncertainty', asyn
   await page.screenshot({ path: testInfo.outputPath('ml-forecast.png'), fullPage: true })
   await page.getByRole('button', { name: 'Training information' }).click()
   await expect(page.getByRole('heading', { name: 'Training information' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Training-time evidence' })).toBeVisible({ timeout: 30_000 })
   await page.screenshot({ path: testInfo.outputPath('ml-training-information.png'), fullPage: true })
   expect(errors).toEqual([])
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBe(0)

@@ -1,5 +1,28 @@
 # UrbanFlow Current Status
 
+## Runtime Health Update - 2026-09-20
+
+Fresh bounded end-to-end streaming verification after Docker Desktop restart:
+
+```text
+status: PASS
+run_id: stream-health-20260920-001
+replay_events: 10,000
+replay_rejected: 0
+reference_rows: 2,863
+live_gold_rows: 2,863
+mismatched_rows: 0
+live_gold: s3a://urbanflow/gold/live_zone_metrics/task6/stream_health_20260920_001/
+checkpoint: s3a://urbanflow/checkpoints/live_trip_metrics/task6/stream_health_20260920_001/
+evidence: urbanflow-streaming/docs/results/end-to-end-streaming-health-20260920.md
+```
+
+Interpretation: the Replay producer, Kafka topic, Spark Structured Streaming
+consumer, historical Gold join, SeaweedFS-backed Live Gold sink, and isolated
+checkpoint path work together correctly for a fresh 10,000-event run. This is
+a bounded integration proof, not a claim that a continuous production query is
+currently kept running.
+
 Snapshot time: 2026-09-13 18:13:50 +07:00  
 Repository: `https://github.com/msa30dn/big-data-team-project`  
 Snapshot method: local inspection plus `git fetch origin`

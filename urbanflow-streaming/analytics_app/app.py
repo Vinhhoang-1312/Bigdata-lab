@@ -14,6 +14,8 @@ try:
         HIGH_DEMAND_RATIO,
         GoldReader,
         chart_mode_for,
+        default_zone_ids,
+        prepare_historical_sample,
         prepare_live_view,
     )
     from .zones import attach_demand_to_geojson, load_taxi_zone_geojson, load_zone_lookup
@@ -23,6 +25,8 @@ except ImportError:
         HIGH_DEMAND_RATIO,
         GoldReader,
         chart_mode_for,
+        default_zone_ids,
+        prepare_historical_sample,
         prepare_live_view,
     )
     from zones import attach_demand_to_geojson, load_taxi_zone_geojson, load_zone_lookup
@@ -42,6 +46,8 @@ TABLE_COLS = [
     "z_score",
     "is_high_demand",
 ]
+MAX_SELECTED_ZONES = 12
+HISTORICAL_SAMPLE_ROWS = 1_000
 
 
 def _paths() -> tuple[str, str, str]:
@@ -127,8 +133,12 @@ def line_comparison_chart(frame: pd.DataFrame, category: str) -> alt.Chart:
         .encode(
             x=alt.X("window_start_local:T", title="Window start (America/New_York)"),
             y=alt.Y("trips:Q", title="Trips"),
-            color=alt.Color("series:N", title=""),
-            strokeDash=alt.StrokeDash(f"{category}:N", title="Zone"),
+            color=alt.Color(
+                f"{category}:N",
+                title="Zone",
+                legend=alt.Legend(labelLimit=220),
+            ),
+            strokeDash=alt.StrokeDash("series:N", title="Measure"),
             tooltip=["window_start_local", category, "series", "trips"],
         )
         .properties(height=320)
@@ -193,7 +203,7 @@ def show_table(frame: pd.DataFrame) -> None:
             "is_high_demand": "High demand",
         }
     )
-    st.dataframe(pretty, width=1200, hide_index=True)
+    st.dataframe(pretty, width="stretch", hide_index=True)
 
 
 st.set_page_config(page_title="UrbanFlow Live", layout="wide")
@@ -248,11 +258,14 @@ id_to_name = (
     .to_dict()
 )
 zone_ids = sorted(id_to_name)
+initial_zone_ids = default_zone_ids(view, MAX_SELECTED_ZONES)
 selected_ids = st.sidebar.multiselect(
     "Pickup zones",
     options=zone_ids,
-    default=zone_ids,
+    default=initial_zone_ids,
     format_func=lambda z: f"{z}  {id_to_name[z]}",
+    max_selections=MAX_SELECTED_ZONES,
+    help=f"Choose up to {MAX_SELECTED_ZONES} zones. The latest active zones are selected initially.",
 )
 selected_labels = [f"{z} — {id_to_name[z]}" for z in selected_ids]
 dates = view["window_start_local"].dt.date
@@ -276,8 +289,11 @@ latest_label = latest.window_label.iloc[0] if not latest.empty else "—"
 
 def live_body() -> None:
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Data mode", "Fixture Gold" if live_path.endswith(".jsonl") else "Integrated Gold")
-    clock = latest.window_start_local.max().strftime("%H:%M") if not latest.empty else "—"
+    c1.metric(
+        "Data mode",
+        "Fixture snapshot" if live_path.endswith(".jsonl") else "Gold replay snapshot",
+    )
+    clock = latest.window_start_local.max().strftime("%b %d, %H:%M") if not latest.empty else "—"
     c2.metric("Latest window (NY)", clock, help=latest_label)
     c3.metric("Current trips", int(latest.current_trip_count.sum()) if not latest.empty else 0)
     c4.metric("High-demand zones", high, help=f"demand_ratio > {HIGH_DEMAND_RATIO}")
@@ -287,12 +303,12 @@ def live_body() -> None:
     )
     with overview:
         st.subheader("New York taxi-zone demand")
-        st.pydeck_chart(nyc_map(latest), width=1200, height=520)
+        st.pydeck_chart(nyc_map(latest), width="stretch", height=520)
         st.caption(
             "TLC taxi-zone polygons. Red = high demand (ratio > 1.5), gold ≈ history, "
             "teal = below history, grey = no live Gold row."
         )
-        st.altair_chart(current_activity_chart(latest), width=1200)
+        st.altair_chart(current_activity_chart(latest), width="stretch")
         show_table(latest)
     with comparison:
         st.subheader("Current trips vs historical mean")
@@ -300,9 +316,10 @@ def live_body() -> None:
             st.info("No rows in the current filters.")
         elif chart_mode_for(filtered) == "grouped":
             st.caption("One time window in this slice, so this is a grouped bar — not a trend line.")
-            st.altair_chart(grouped_comparison_chart(latest), width=1200)
+            st.altair_chart(grouped_comparison_chart(latest), width="stretch")
         else:
-            st.altair_chart(line_comparison_chart(filtered, "zone_label"), width=1200)
+            st.caption(f"Trend comparison for up to {MAX_SELECTED_ZONES} selected zones.")
+            st.altair_chart(line_comparison_chart(filtered, "zone_label"), width="stretch")
         show_table(filtered)
     with explorer:
         zone = st.selectbox("Zone", selected_labels or [f"{z} — {id_to_name[z]}" for z in zone_ids])
@@ -315,11 +332,12 @@ def live_body() -> None:
             m1.metric("Current trips", int(row.current_trip_count))
             m2.metric("Historical mean", float(row.historical_mean_trip_count) if pd.notna(row.historical_mean_trip_count) else "—")
             m3.metric("Demand ratio", float(row.demand_ratio) if pd.notna(row.demand_ratio) else "—")
+            st.caption(f"Latest available window for this zone: {row.window_label}")
             if chart_mode_for(zone_rows) == "grouped":
                 st.caption("Only one window — bars compare this zone to history. A line needs two or more windows.")
-                st.altair_chart(grouped_comparison_chart(zone_rows), width=1200)
+                st.altair_chart(grouped_comparison_chart(zone_rows), width="stretch")
             else:
-                st.altair_chart(line_comparison_chart(zone_rows, "zone_label"), width=1200)
+                st.altair_chart(line_comparison_chart(zone_rows, "zone_label"), width="stretch")
             show_table(zone_rows)
     with unusual:
         ranked = latest.sort_values("demand_ratio", ascending=False, na_position="last")
@@ -331,14 +349,25 @@ def live_body() -> None:
         if plot.empty:
             st.info("No demand-ratio values to rank.")
         else:
-            st.altair_chart(demand_chart(plot), width=1200)
+            st.altair_chart(demand_chart(plot), width="stretch")
         show_table(ranked)
 
 
 live_body()
 
 with st.expander("Historical baseline"):
-    hist = historical[historical.pickup_zone_id.isin(selected_ids)] if selected_ids else historical
-    named = lookup.loc[:, ["pickup_zone_id", "zone_name"]]
-    hist = hist.merge(named, on="pickup_zone_id", how="left")
-    st.dataframe(hist, width=1200, hide_index=True)
+    st.caption(
+        "Historical Gold can be large. Load a bounded sample only when you need to inspect raw rows."
+    )
+    if st.checkbox("Load historical sample"):
+        hist, historical_row_count = prepare_historical_sample(
+            historical,
+            lookup,
+            selected_ids,
+            HISTORICAL_SAMPLE_ROWS,
+        )
+        st.caption(
+            f"Showing {len(hist):,} of {historical_row_count:,} matching rows "
+            f"(sample limit: {HISTORICAL_SAMPLE_ROWS:,})."
+        )
+        st.dataframe(hist, width="stretch", hide_index=True)

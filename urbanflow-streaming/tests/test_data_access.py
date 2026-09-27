@@ -128,6 +128,53 @@ def test_single_window_chart_is_grouped_not_line():
     assert chart_mode_for(two_windows) == "line"
 
 
+def test_default_zone_ids_uses_latest_window_and_caps_by_current_activity():
+    from analytics_app.data_access import default_zone_ids
+
+    import pandas as pd
+
+    view = pd.DataFrame({
+        "window_start_local": pd.to_datetime([
+            "2025-01-06 07:55",
+            "2025-01-06 08:00",
+            "2025-01-06 08:00",
+            "2025-01-06 08:00",
+        ]),
+        "pickup_zone_id": [99, 4, 7, 2],
+        "current_trip_count": [100, 1, 9, 5],
+    })
+
+    assert default_zone_ids(view, limit=2) == [7, 2]
+
+
+def test_historical_sample_filters_selected_zones_and_caps_rows():
+    from analytics_app.data_access import prepare_historical_sample
+
+    import pandas as pd
+
+    historical = pd.DataFrame({
+        "pickup_zone_id": [1, 2, 2, 2],
+        "hour": [0, 0, 1, 2],
+    })
+    lookup = pd.DataFrame({
+        "pickup_zone_id": [1, 2],
+        "zone_name": ["Newark Airport", "Jamaica"],
+    })
+
+    sample, total_rows = prepare_historical_sample(
+        historical,
+        lookup,
+        selected_ids=[2],
+        limit=2,
+    )
+
+    assert total_rows == 3
+    assert sample.to_dict("records") == [
+        {"pickup_zone_id": 2, "hour": 0, "zone_name": "Jamaica"},
+        {"pickup_zone_id": 2, "hour": 1, "zone_name": "Jamaica"},
+    ]
+
+
 def test_choropleth_paints_live_zones_and_leaves_others_grey(foundation):
     from analytics_app.data_access import GoldReader, HIGH_DEMAND_RATIO, prepare_live_view
     from analytics_app.zones import attach_demand_to_geojson, load_taxi_zone_geojson, load_zone_lookup, ratio_fill_color
