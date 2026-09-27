@@ -100,8 +100,9 @@ Silver, API equivalence, and Historical Gold commands.
 
 ## Completion boundary
 
-Independent Batch is complete, and canonical February Silver → Replay → Kafka
-passes without an ad-hoc adapter. Historical Gold → Streaming remains deferred.
-When Streaming exists, test that real boundary before declaring integration
-complete. Keep `docs/implementation-status.md`, cleaning decisions, measured
-results, and runbooks current whenever Batch behavior changes.
+Independent Batch is complete, canonical February Silver → Replay → Kafka
+passes without an ad-hoc adapter, and Streaming reads canonical Historical Gold
+without an adapter. Final end-to-end integration acceptance remains pending
+until its recorded verifier passes. Keep `docs/implementation-status.md`,
+cleaning decisions, measured results, and runbooks current whenever Batch
+behavior changes.

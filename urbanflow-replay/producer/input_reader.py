@@ -134,8 +134,11 @@ def iter_integrated(
         batch_readahead=batch_readahead,
         fragment_readahead=fragment_readahead,
     )
+    last_pickup: datetime | None = None
+    row_count = 0
     for batch in scanner.to_batches():
         for row in batch.to_pylist():
+            row_count += 1
             pickup = row["pickup_datetime"]
             if not isinstance(pickup, datetime):
                 raise ValueError(
@@ -143,5 +146,12 @@ def iter_integrated(
                 )
             if pickup.tzinfo is None:
                 pickup = pickup.replace(tzinfo=UTC)
+            if last_pickup is not None and pickup < last_pickup:
+                raise ValueError(
+                    f"Monotonicity violation at row {row_count}: event time {pickup.isoformat()} "
+                    f"is earlier than preceding event {last_pickup.isoformat()}. "
+                    "Silver Parquet dataset is not globally sorted."
+                )
+            last_pickup = pickup
             row["pickup_datetime"] = pickup.astimezone(NYC).isoformat()
             yield row

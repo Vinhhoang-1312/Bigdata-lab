@@ -85,5 +85,6 @@ Parquet, or rate-tolerance checks. Velocity evidence must report requested and
 achieved rates. Update runbooks, implementation status, measured results, and
 the environment lock when behavior or dependencies change.
 
-Replay → Streaming acceptance remains deferred until Streaming exists; then
-verify a generic Foundation event is consumed without an integration adapter.
+Kafka → Spark acceptance with the generic Foundation event shape passes without
+an integration adapter. Full Replay CLI → Kafka → Streaming Live Gold acceptance
+and the final streaming-active velocity experiment remain pending.

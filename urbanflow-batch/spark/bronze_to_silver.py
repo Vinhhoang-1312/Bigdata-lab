@@ -33,6 +33,9 @@ def main() -> None:
     settings = load_settings(args.config)
     spark = SparkSession.builder.appName("UrbanFlow Bronze to Silver").getOrCreate()
     spark.conf.set("spark.sql.session.timeZone", settings.analytics_timezone)
+    actual_tz = spark.conf.get("spark.sql.session.timeZone")
+    if actual_tz != "America/New_York":
+        raise AssertionError(f"Spark session timezone must be America/New_York, got {actual_tz}")
     spark.sparkContext.setLogLevel("WARN")
 
     source = read_source_trips(
@@ -49,7 +52,7 @@ def main() -> None:
     if source_rows != silver_rows + rejected_rows:
         raise AssertionError("Accepted and rejected row counts do not match source count")
 
-    assert_silver_contract(result.silver)
+    assert_silver_contract(result.silver, zones)
     (
         result.silver.sortWithinPartitions("pickup_datetime")
         .write.mode(settings.write_mode)
@@ -63,7 +66,7 @@ def main() -> None:
     persisted_silver = spark.read.parquet(settings.silver_output_path).select(
         *result.silver.columns
     )
-    assert_silver_contract(persisted_silver)
+    assert_silver_contract(persisted_silver, zones)
     persisted_rows = persisted_silver.count()
     if persisted_rows != silver_rows:
         raise AssertionError(

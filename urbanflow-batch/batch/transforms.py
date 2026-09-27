@@ -27,6 +27,31 @@ def _invalid_timestamp(raw: Column, parsed: Column) -> Column:
     return ~F.coalesce(parsed.isNotNull() & round_trip_matches, F.lit(False))
 
 
+def _clean_integer(col_name: str) -> Column:
+    d = F.expr(f"try_cast({col_name} as double)")
+    is_valid_int = (
+        d.isNotNull()
+        & ~F.isnan(d)
+        & (d != float("inf"))
+        & (d != float("-inf"))
+        & (d == F.floor(d))
+    )
+    return F.when(
+        is_valid_int, F.expr(f"try_cast({col_name} as int)")
+    ).otherwise(F.lit(None).cast("int"))
+
+
+def _clean_double(col_name: str) -> Column:
+    d = F.expr(f"try_cast({col_name} as double)")
+    is_valid_double = (
+        d.isNotNull()
+        & ~F.isnan(d)
+        & (d != float("inf"))
+        & (d != float("-inf"))
+    )
+    return F.when(is_valid_double, d).otherwise(F.lit(None).cast("double"))
+
+
 def bronze_to_silver(source: DataFrame, zone_lookup: DataFrame) -> TransformationResult:
     """Clean source trips and return valid Silver and visibly rejected rows."""
     _required_columns_present(source)
@@ -65,12 +90,12 @@ def bronze_to_silver(source: DataFrame, zone_lookup: DataFrame) -> Transformatio
             "dropoff_datetime",
             F.try_to_timestamp(F.col("_raw_dropoff"), F.lit(TIMESTAMP_PATTERN)),
         )
-        .withColumn("pickup_zone_id", F.expr("try_cast(PULocationID as int)"))
-        .withColumn("dropoff_zone_id", F.expr("try_cast(DOLocationID as int)"))
-        .withColumn("trip_distance", F.expr("try_cast(trip_distance as double)"))
-        .withColumn("passenger_count", F.expr("try_cast(passenger_count as int)"))
-        .withColumn("fare_amount", F.expr("try_cast(fare_amount as double)"))
-        .withColumn("total_amount", F.expr("try_cast(total_amount as double)"))
+        .withColumn("pickup_zone_id", _clean_integer("PULocationID"))
+        .withColumn("dropoff_zone_id", _clean_integer("DOLocationID"))
+        .withColumn("trip_distance", _clean_double("trip_distance"))
+        .withColumn("passenger_count", _clean_integer("passenger_count"))
+        .withColumn("fare_amount", _clean_double("fare_amount"))
+        .withColumn("total_amount", _clean_double("total_amount"))
     )
 
     pickup_invalid = _invalid_timestamp(

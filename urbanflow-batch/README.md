@@ -45,7 +45,7 @@ Gold with `stddev_pop`, S3A read-back, and two-worker Volume execution.
 
 January 2023 is the frozen historical period; February 2023 is the held-out
 replay period. The direct Silver → Replay boundary now passes; Historical Gold
-→ Streaming acceptance remains deferred until Streaming exists. See
+→ Streaming acceptance has been implemented and validated. See
 [docs/implementation-status.md](docs/implementation-status.md).
 
 ## Run the fixture implementation

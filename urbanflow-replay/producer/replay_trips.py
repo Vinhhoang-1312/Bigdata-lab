@@ -44,11 +44,6 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Burst limiter: maximum events per second (e.g. 500 eps)",
     )
-    parser.add_argument(
-        "--loop",
-        action="store_true",
-        help="Continuously loop dataset with monotonic timestamp rebasing",
-    )
     parser.add_argument("--max-events", type=int)
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--print-events", type=int, default=0)
@@ -65,7 +60,7 @@ def main() -> int:
     config = load_config(args.config)
 
     if args.mode == "fixture":
-        records = lambda: iter_fixture(config.fixture_path)
+        records = list(iter_fixture(config.fixture_path))
         valid_zone_ids = load_zone_ids(ZONE_FIXTURE)
     else:
         count = integrated_row_count(
@@ -76,13 +71,16 @@ def main() -> int:
             config.replay_end_date,
         )
         print(f"integrated_replay_rows={count}")
-        records = lambda: iter_integrated(
-            config.integrated_silver_uri,
-            config.s3_endpoint,
-            config.s3_region,
-            config.replay_start_date,
-            config.replay_end_date,
-        )
+
+        def records():
+            return iter_integrated(
+                config.integrated_silver_uri,
+                config.s3_endpoint,
+                config.s3_region,
+                config.replay_start_date,
+                config.replay_end_date,
+            )
+
         valid_zone_ids = None
 
     run_id = args.run_id or uuid.uuid4().hex[:12]
@@ -93,7 +91,6 @@ def main() -> int:
         rate=args.rate,
         speedup=args.speedup,
         max_rate=args.max_rate,
-        loop=args.loop,
         max_events=args.max_events,
         dry_run=args.dry_run,
         print_events=args.print_events,
@@ -109,7 +106,6 @@ def main() -> int:
             "interrupted": interrupted,
             "run_id": run_id,
             "speedup": args.speedup,
-            "loop": args.loop,
         }
     )
     rendered = json.dumps(result, sort_keys=True)

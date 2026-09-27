@@ -49,6 +49,10 @@ def copy_local_file(spark: SparkSession, source: Path, destination: str) -> None
 def main() -> None:
     args = parse_args()
     spark = SparkSession.builder.appName("UrbanFlow Bronze Landing").getOrCreate()
+    spark.conf.set("spark.sql.session.timeZone", "America/New_York")
+    actual_tz = spark.conf.get("spark.sql.session.timeZone")
+    if actual_tz != "America/New_York":
+        raise AssertionError(f"Spark session timezone must be America/New_York, got {actual_tz}")
     spark.sparkContext.setLogLevel("WARN")
     source_dir = Path(args.source_dir)
 

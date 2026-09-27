@@ -55,13 +55,15 @@ def actual_as_dicts(silver) -> list[dict]:
 
 
 def assert_records_equal(actual: list[dict], expected: list[dict]) -> None:
-    key = lambda row: (
-        row["pickup_datetime"],
-        row["dropoff_datetime"],
-        row["pickup_zone_id"],
-    )
-    actual = sorted(actual, key=key)
-    expected = sorted(expected, key=key)
+    def sort_key(row: dict) -> tuple:
+        return (
+            row["pickup_datetime"],
+            row["dropoff_datetime"],
+            row["pickup_zone_id"],
+        )
+
+    actual = sorted(actual, key=sort_key)
+    expected = sorted(expected, key=sort_key)
     assert len(actual) == len(expected)
     for actual_row, expected_row in zip(actual, expected, strict=True):
         assert actual_row.keys() == expected_row.keys()
@@ -206,6 +208,36 @@ def test_dst_edge_cases(spark: SparkSession, zones) -> None:
     assert fall_back_offset == "2024-11-03T01:30:00-04:00", fall_back_offset
 
 
+def test_parquet_fractional_and_non_finite_rejection(spark: SparkSession, zones) -> None:
+    """Parquet physical columns (double/float) must reject fractional integers and non-finite values."""
+    rows = [
+        # 1. Fractional PULocationID=161.5
+        (datetime(2024, 3, 4, 12, 0), datetime(2024, 3, 4, 12, 10), 161.5, 236.0, 1.0, 1.0, 10.0, 12.0),
+        # 2. Fractional DOLocationID=236.5
+        (datetime(2024, 3, 4, 12, 0), datetime(2024, 3, 4, 12, 10), 161.0, 236.5, 1.0, 1.0, 10.0, 12.0),
+        # 3. Fractional passenger_count=1.5
+        (datetime(2024, 3, 4, 12, 0), datetime(2024, 3, 4, 12, 10), 161.0, 236.0, 1.0, 1.5, 10.0, 12.0),
+        # 4. NaN trip_distance
+        (datetime(2024, 3, 4, 12, 0), datetime(2024, 3, 4, 12, 10), 161.0, 236.0, float("nan"), 1.0, 10.0, 12.0),
+        # 5. Infinity fare_amount
+        (datetime(2024, 3, 4, 12, 0), datetime(2024, 3, 4, 12, 10), 161.0, 236.0, 1.0, 1.0, float("inf"), 12.0),
+        # 6. Negative infinity total_amount
+        (datetime(2024, 3, 4, 12, 0), datetime(2024, 3, 4, 12, 10), 161.0, 236.0, 1.0, 1.0, 10.0, float("-inf")),
+    ]
+    parquet_df = spark.createDataFrame(rows, SOURCE_COLUMNS)
+    result = bronze_to_silver(parquet_df, zones)
+    assert result.silver.count() == 0, f"Expected 0 silver rows, got {result.silver.count()}"
+    assert result.rejected.count() == 6, f"Expected 6 rejected rows, got {result.rejected.count()}"
+
+    reasons_list = [r.rejection_reasons for r in result.rejected.collect()]
+    assert any("pickup_zone_invalid" in r for r in reasons_list)
+    assert any("dropoff_zone_invalid" in r for r in reasons_list)
+    assert any("passenger_count_invalid" in r for r in reasons_list)
+    assert any("trip_distance_invalid" in r for r in reasons_list)
+    assert any("fare_amount_invalid" in r for r in reasons_list)
+    assert any("total_amount_invalid" in r for r in reasons_list)
+
+
 def main() -> None:
     spark = SparkSession.builder.appName("UrbanFlow Batch Fixture Tests").getOrCreate()
     spark.sparkContext.setLogLevel("WARN")
@@ -220,7 +252,15 @@ def main() -> None:
     assert source.count() == 15
     assert result.silver.count() == 10
     assert result.rejected.count() == 5
-    assert_silver_contract(result.silver)
+    assert_silver_contract(result.silver, zones)
+    invalid_zone_silver = result.silver.withColumn(
+        "pickup_zone_id", F.lit(999).cast("int")
+    )
+    try:
+        assert_silver_contract(invalid_zone_silver, zones)
+        raise AssertionError("Expected unknown-zone validation to fail")
+    except AssertionError as error:
+        assert "not present in zone lookup" in str(error)
     assert tuple(result.silver.columns) == SILVER_FIELDS
     assert {
         field.name: field.dataType.simpleString() for field in result.silver.schema.fields
@@ -248,6 +288,7 @@ def main() -> None:
     test_optional_numeric_handling(spark, zones)
     test_all_rejection_rules(spark, zones)
     test_dst_edge_cases(spark, zones)
+    test_parquet_fractional_and_non_finite_rejection(spark, zones)
 
     temporary_root = tempfile.mkdtemp(prefix="urbanflow-batch-")
     output = str(Path(temporary_root) / "silver")
@@ -286,7 +327,7 @@ def main() -> None:
             ).parquet(output)
             round_trip = spark.read.parquet(output).select(*SILVER_FIELDS)
             assert round_trip.count() == 10
-            assert_silver_contract(round_trip)
+            assert_silver_contract(round_trip, zones)
             assert_records_equal(actual_as_dicts(round_trip), expected)
 
         partition_dirs = {

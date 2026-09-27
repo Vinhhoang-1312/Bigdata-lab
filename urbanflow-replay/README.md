@@ -53,8 +53,10 @@ message keys, malformed-event exclusion, pacing, metrics, graceful flush,
 canonical topic metadata, generic consumption, and direct S3 Parquet input.
 Measured rates from 100 through 5,000 events/sec passed.
 
-Replay → Streaming and Kafka → Spark tests remain deferred until Streaming is
-implemented. See [`docs/implementation-status.md`](docs/implementation-status.md).
+The Kafka → Spark Foundation-event boundary is validated. Formal full Replay
+CLI → Kafka → Streaming Live Gold acceptance and the final streaming-active
+velocity experiment remain pending. See
+[`docs/implementation-status.md`](docs/implementation-status.md).
 
 ## Start and test
 
@@ -91,20 +93,24 @@ docker compose run --rm replay-python \
   --mode integrated --rate 1000 --max-events 10000 --print-events 1
 ```
 
-### Continuous Virtual Time Replay
+### Finite virtual-time replay
 
-Accelerate historical event time proportionally while preserving relative inter-arrival times:
+Accelerate the frozen February event sequence proportionally while preserving every
+historical `event_time` exactly:
 
 ```bash
-# 60x acceleration (1s wall time = 1m event time), dynamic burst limiter, continuous looping
+# 60x acceleration (1s wall time = 1m event time) with a dynamic burst limiter
 docker compose run --rm replay-python \
   python /workspace/urbanflow-replay/producer/replay_trips.py \
-  --mode integrated --speedup 60 --loop
+  --mode integrated --speedup 60
 ```
 
-- `--speedup <N>`: Event time acceleration factor (e.g., 60 for 60x, 300 for 300x).
-- `--max-rate <N>`: Optional burst limiter bounding peak events/sec. When omitted, Python automatically sets `max_rate = max(500.0, 4.0 * speedup)`.
-- `--loop`: Continuously loops dataset with strictly monotonic timestamp rebasing, preventing Spark watermark drops.
+- `--speedup <N>`: Event-time acceleration factor (for example, 60 or 300).
+- `--max-rate <N>`: Optional peak events-per-second limiter. When omitted, Replay
+  uses `max_rate = max(500.0, 4.0 * speedup)`.
+- Replay stops at the end of the frozen source period. At 60×, the complete
+  February sequence lasts approximately 11.2 hours. Start a clean demo lifecycle
+  for another run; Replay never rebases historical timestamps.
 
 #### Unified `MAX_RATE` Policy & Empirical Basis
 

@@ -1,84 +1,53 @@
 #!/usr/bin/env python3
-"""Validates continuous virtual time replay across multiple loop cycles.
+"""Validate finite replay event-time preservation and virtual-clock pacing.
 
 Verifies:
-1. Proportional time acceleration and inter-arrival preservation.
-2. Burst limiting (max-rate) behavior.
-3. Monotonic timestamp rebasing across 3+ loop cycles.
-4. Spark Structured Streaming watermark compatibility (no events dropped).
+1. Historical event timestamps are emitted once and remain unchanged.
+2. Proportional time acceleration and inter-arrival preservation.
+3. Burst limiting (max-rate) behavior.
 """
 
 from __future__ import annotations
 
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 
 # Add urbanflow-replay to path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "urbanflow-replay"))
 
-from producer.event_time import NYC
-from producer.input_reader import iter_fixture
-from producer.rate_controller import VirtualClockController
-from producer.replay import rebased_record_stream
+from producer.event_time import NYC  # noqa: E402
+from producer.input_reader import iter_fixture  # noqa: E402
+from producer.rate_controller import VirtualClockController  # noqa: E402
+from producer.replay import record_stream  # noqa: E402
 
 FIXTURE_PATH = REPO_ROOT / "urbanflow-foundation" / "fixtures" / "silver" / "silver_trips.jsonl"
 
 
-def test_monotonic_rebasing_across_cycles(num_cycles: int = 5) -> None:
-    print(f"=== 1. Validating Monotonic Rebasing across {num_cycles} cycles ===")
+def test_finite_event_time_preservation() -> None:
+    print("=== 1. Validating finite replay event-time preservation ===")
     records = list(iter_fixture(FIXTURE_PATH))
-    records_per_cycle = len(records)
-    total_events_to_read = records_per_cycle * num_cycles
+    emitted = list(record_stream(records))
+    expected = sorted(
+        records,
+        key=lambda record: datetime.fromisoformat(record["pickup_datetime"]),
+    )
 
-    stream = rebased_record_stream(records, loop=True)
+    assert len(emitted) == len(expected)
+    previous_event_time: datetime | None = None
+    for source, (record, event_time, original_time) in zip(
+        expected, emitted, strict=True
+    ):
+        assert record == source
+        assert original_time == source["pickup_datetime"]
+        assert event_time.isoformat() == source["pickup_datetime"]
+        if previous_event_time is not None:
+            assert event_time >= previous_event_time
+        previous_event_time = event_time
 
-    previous_virtual_dt: datetime | None = None
-    watermark_delay = timedelta(minutes=10)
-    current_watermark: datetime | None = None
-
-    cycle_counts: dict[int, int] = {}
-    max_event_time_seen: datetime | None = None
-
-    dropped_by_watermark_count = 0
-
-    for i in range(total_events_to_read):
-        cycle, record, virtual_dt, orig_str = next(stream)
-        cycle_counts[cycle] = cycle_counts.get(cycle, 0) + 1
-
-        # Check watermark
-        if max_event_time_seen is None or virtual_dt > max_event_time_seen:
-            max_event_time_seen = virtual_dt
-            current_watermark = max_event_time_seen - watermark_delay
-
-        if current_watermark is not None and virtual_dt < current_watermark:
-            dropped_by_watermark_count += 1
-            print(
-                f"ERROR: Event {i} (cycle {cycle}) at {virtual_dt} dropped by watermark {current_watermark}!",
-                file=sys.stderr,
-            )
-
-        # Monotonicity check
-        if previous_virtual_dt is not None:
-            assert virtual_dt >= previous_virtual_dt, (
-                f"Monotonicity violation at event {i}: {virtual_dt} < {previous_virtual_dt}"
-            )
-            # If across cycle boundary, it must be strictly greater
-            if cycle > 0 and (i % records_per_cycle) == 0:
-                assert virtual_dt > previous_virtual_dt, (
-                    f"Cycle boundary not strictly advancing: cycle {cycle} start {virtual_dt} "
-                    f"<= cycle {cycle - 1} end {previous_virtual_dt}"
-                )
-
-        previous_virtual_dt = virtual_dt
-
-    print(f"  Processed {total_events_to_read} events across {len(cycle_counts)} cycles.")
-    for c, cnt in sorted(cycle_counts.items()):
-        print(f"  - Cycle {c}: {cnt} events")
-    print(f"  Events dropped by Spark watermark (10m): {dropped_by_watermark_count}")
-    assert dropped_by_watermark_count == 0, "Watermark dropped events!"
-    print("  Monotonic Rebasing: PASS\n")
+    print(f"  Emitted {len(emitted)} source events exactly once.")
+    print("  Historical event times preserved: PASS\n")
 
 
 def test_proportional_time_acceleration() -> None:
@@ -159,11 +128,11 @@ def test_burst_limiter() -> None:
 
 def main() -> int:
     try:
-        test_monotonic_rebasing_across_cycles(num_cycles=5)
+        test_finite_event_time_preservation()
         test_proportional_time_acceleration()
         test_burst_limiter()
         print("==================================================")
-        print("MONOTONIC VIRTUAL TIME VALIDATION = PASS")
+        print("FINITE VIRTUAL TIME VALIDATION = PASS")
         print("==================================================")
         return 0
     except Exception as exc:

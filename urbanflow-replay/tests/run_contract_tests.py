@@ -16,7 +16,7 @@ from producer.event_time import EventTimeError, parse_event_time
 from producer.event_validator import EventValidator
 from producer.input_reader import iter_fixture, load_zone_ids
 from producer.rate_controller import RateController, VirtualClockController
-from producer.replay import rebased_record_stream, replay_records
+from producer.replay import record_stream, replay_records
 from producer.serialization import message_key, serialize_event
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -348,30 +348,22 @@ def test_virtual_clock_controller() -> None:
 
 
 
-def test_rebased_record_stream() -> None:
+def test_record_stream_preserves_event_time() -> None:
     records = [
         {"pickup_datetime": "2023-02-01T10:00:00-05:00", "id": 1},
         {"pickup_datetime": "2023-02-01T10:05:00-05:00", "id": 2},
     ]
-    stream = rebased_record_stream(records, loop=True)
-    events = [next(stream) for _ in range(6)]
+    events = list(record_stream(records))
 
-    # Cycle 0
-    assert events[0][0] == 0
-    assert events[1][0] == 0
-    assert events[0][2] < events[1][2]
+    assert len(events) == len(records)
+    assert [event[0] for event in events] == records
+    assert [event[2] for event in events] == [
+        record["pickup_datetime"] for record in records
+    ]
+    assert events[0][1] < events[1][1]
 
-    # Cycle 1
-    assert events[2][0] == 1
-    assert events[3][0] == 1
-    # Verify strict monotonicity across cycle boundary
-    assert events[1][2] < events[2][2]
-    assert events[2][2] < events[3][2]
-
-    # Cycle 2
-    assert events[4][0] == 2
-    assert events[5][0] == 2
-    assert events[3][2] < events[4][2]
+    out_of_order = iter(reversed(records))
+    expect_error(lambda: list(record_stream(out_of_order)), "Monotonicity violation")
 
 
 def main() -> None:
@@ -385,8 +377,8 @@ def main() -> None:
     print("RATE CONTROLLER = PASS")
     test_virtual_clock_controller()
     print("VIRTUAL CLOCK CONTROLLER = PASS")
-    test_rebased_record_stream()
-    print("REBASED RECORD STREAM = PASS")
+    test_record_stream_preserves_event_time()
+    print("FINITE RECORD STREAM = PASS")
     test_replay_orchestration()
     print("REPLAY ORCHESTRATION = PASS")
 
