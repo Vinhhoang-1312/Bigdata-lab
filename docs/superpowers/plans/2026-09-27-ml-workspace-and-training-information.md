@@ -230,7 +230,7 @@ git commit -m "feat(api): score one trip with completed kmeans artifact"
   weekly baseline and optional anomaly snapshot.
 - Produces: `build_training_information(*, config: dict, metadata: dict, evidence: dict, anomaly: dict | None, anomaly_error: str | None = None) -> dict`, `ModelStore.information(anomaly, anomaly_error=None) -> dict`, and `GET /v1/ml/information`.
 
-- [ ] **Step 1: Write the complete response test**
+- [x] **Step 1: Write the complete response test**
 
 Assert stable top-level keys from the spec. Pin actual semantics: demand model
 name `GTQN-Lite`, model family `graph_temporal_quantile_regression`, lookback
@@ -239,7 +239,7 @@ evidence including per-rank host/batches/checksum-match boolean, preprocessing
 policies, architecture techniques, anomaly `k=8`, threshold/periods/features,
 and both models marked `research_only`.
 
-- [ ] **Step 2: Write partial-evidence and honesty tests**
+- [x] **Step 2: Write partial-evidence and honesty tests**
 
 Assert `anomaly=None` yields `kmeans_anomaly.availability="unavailable"` while
 demand data remains available. Assert the output calls hosts `training_hosts`
@@ -247,39 +247,39 @@ or `training-time evidence`, never `active nodes`, `healthy nodes` or current
 cluster health. Assert checksum values are reduced to a safe prefix in the UI
 contract while match status is preserved.
 
-- [ ] **Step 3: Write missing-data policy tests**
+- [x] **Step 3: Write missing-data policy tests**
 
 Pin all policies in Spec 5.3. In particular assert there is no generic
 `mean_imputation` or `mode_imputation`; demand gaps include `observed_mask`,
 seasonal lags include missing indicators, and K-means invalid fields are
 rejected rather than filled.
 
-- [ ] **Step 4: Run focused tests and confirm RED**
+- [x] **Step 4: Run focused tests and confirm RED**
 
 ```powershell
 docker-compose --env-file "C:\Users\DELL\Documents\Big Data\.env" run --rm --no-deps --entrypoint /usr/bin/python3 ml-api -m unittest discover -s tests -p "test_training_information.py" -v
 ```
 
-- [ ] **Step 5: Implement the builder and ModelStore method**
+- [x] **Step 5: Implement the builder and ModelStore method**
 
 Keep the builder deterministic and free of S3/network calls. Read values from
 config, metadata, evidence and artifact wherever they exist. Stable technique
 descriptions may be constants in this module, but measured values must never be
 hard-coded. Return explicit `unavailable` values instead of invented zeros.
 
-- [ ] **Step 6: Add the endpoint with bounded degradation**
+- [x] **Step 6: Add the endpoint with bounded degradation**
 
 Load K-means snapshot through Task 2. Catch its loading failure, pass a generic
 error code/string to the information builder, and still return demand evidence.
 If the GTQN ModelStore itself is unavailable, preserve current HTTP 503 behavior.
 
-- [ ] **Step 7: Run all backend tests**
+- [x] **Step 7: Run all backend tests**
 
 ```powershell
 docker-compose --env-file "C:\Users\DELL\Documents\Big Data\.env" run --rm --no-deps --entrypoint /usr/bin/python3 ml-api -m unittest discover -s tests -v
 ```
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```powershell
 git add urbanflow-ml/ml_serving urbanflow-ml/tests

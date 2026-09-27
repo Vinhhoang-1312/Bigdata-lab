@@ -53,6 +53,17 @@ def create_app() -> FastAPI:
     def evidence() -> dict:
         return _store().evidence()
 
+    @app.get("/v1/ml/information")
+    def information() -> dict:
+        store = _store()
+        anomaly = None
+        anomaly_error = None
+        try:
+            anomaly = get_anomaly_snapshot(os.getenv("URBANFLOW_TRIP_ANOMALY_RUN_ID", DEFAULT_RUN_ID))
+        except Exception:
+            anomaly_error = "artifact_unavailable"
+        return store.information(anomaly, anomaly_error)
+
     @app.post("/v1/forecast")
     def forecast(request: ForecastRequest) -> dict:
         try:

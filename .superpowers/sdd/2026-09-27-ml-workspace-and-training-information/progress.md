@@ -22,4 +22,6 @@ Ruling: Task 2 exposed the same baseline serving defects and incomplete test run
 
 Task 1: complete (commits 0ae7975..af9cde9, tests: focused `test_trip_anomaly_model.py` -> 7/7 pass; full suite baseline blockers recorded)
 
-Task 2: complete (commit pending; focused pytest 21 passed; full unittest suite 84 tests OK; baseline runtime/serving contracts repaired)
+Task 2: complete (commit 2c1ace4; focused pytest 21 passed; full unittest suite 84 tests OK; baseline runtime/serving contracts repaired)
+
+Task 3: complete (uncommitted; focused builder/endpoint tests pass; full unittest suite 88 tests OK)

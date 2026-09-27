@@ -8,6 +8,25 @@ import torch
 
 
 class ForecastServingTest(unittest.TestCase):
+    def test_information_endpoint_degrades_anomaly_without_hiding_demand(self):
+        from ml_serving.app import create_app
+
+        route = next(item.endpoint for item in create_app().routes if item.path == "/v1/ml/information")
+        calls = []
+
+        class Store:
+            def information(self, anomaly, anomaly_error=None):
+                calls.append((anomaly, anomaly_error))
+                return {"demand_forecast": {"availability": "available"},
+                        "kmeans_anomaly": {"availability": "unavailable"}}
+
+        with patch("ml_serving.app._store", return_value=Store()), \
+             patch("ml_serving.app.get_anomaly_snapshot", side_effect=RuntimeError("private storage detail")):
+            result = route()
+
+        self.assertEqual({"availability": "available"}, result["demand_forecast"])
+        self.assertEqual((None, "artifact_unavailable"), calls[0])
+
     def test_anomaly_snapshot_cache_reads_once(self):
         from ml_serving.trip_anomalies import get_anomaly_snapshot
 
