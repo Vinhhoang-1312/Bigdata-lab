@@ -1,0 +1,11 @@
+hdfs_mirror/
+__pycache__/
+.venv/
+*.pyc
+.ipynb_checkpoints/
+data/incoming/**
+!data/incoming/.gitkeep
+data/subset/*
+!data/subset/.gitkeep
+reports/*.json
+!reports/.gitkeep
