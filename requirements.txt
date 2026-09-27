@@ -5,3 +5,6 @@ pandas>=2.0
 pyarrow>=14
 matplotlib>=3.7
 seaborn>=0.13
+setuptools>=68
+reportlab>=5.0
+pypdf>=6.0

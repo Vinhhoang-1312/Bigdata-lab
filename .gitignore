@@ -9,3 +9,4 @@ data/subset/*
 !data/subset/.gitkeep
 reports/*.json
 !reports/.gitkeep
+.hadoop/

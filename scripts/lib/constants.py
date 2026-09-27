@@ -1,8 +1,9 @@
-"""BigEarthNet constants shared across the pipeline."""
+﻿"""BigEarthNet constants shared across the pipeline."""
 
 from __future__ import annotations
 
 BANDS_10M = ("B02", "B03", "B04", "B08")
+BANDS_20M = ("B05", "B06", "B07", "B8A", "B11", "B12")
 BAND_TO_NAME = {
     "B02": "blue",
     "B03": "green",
@@ -14,6 +15,7 @@ BAND_TO_NAME = {
 REFLECTANCE_SCALE = 1e4
 EPS = 1e-6
 PATCH_HW = 120  # 10 m bands
+PATCH_HW_20M = 60
 
 COUNTRIES_V2 = (
     "Austria",
@@ -64,7 +66,30 @@ FEATURE_COLS = (
     "brightness",
 )
 
+FEATURE_V2_EXTRA_COLS = (
+    "mean_b05",
+    "mean_b06",
+    "mean_b07",
+    "mean_b8a",
+    "mean_b11",
+    "mean_b12",
+    "std_b05",
+    "std_b06",
+    "std_b07",
+    "std_b8a",
+    "std_b11",
+    "std_b12",
+    "ndmi",
+    "ndbi",
+    "ndvi_p10",
+    "ndvi_p50",
+    "ndvi_p90",
+)
+
+FEATURE_V2_COLS = FEATURE_COLS + FEATURE_V2_EXTRA_COLS
+
 DEFAULT_N_PATCHES = 60_000
 DEFAULT_N_COUNTRIES = 3
-DEFAULT_N_CLASSES = 4  # in [3, 5]
+DEFAULT_N_CLASSES = 35
 DEBUG_N_PATCHES = 500
+RANDOM_SEED = 501

@@ -1,4 +1,4 @@
-"""Path resolution: local mirror vs real HDFS."""
+﻿"""Path resolution: local mirror vs real HDFS."""
 
 from __future__ import annotations
 
@@ -40,7 +40,6 @@ def local_hdfs_mirror() -> Path:
 def hdfs_root() -> str:
     """Logical root used by Spark paths."""
     if use_local():
-        # Spark file:// needs forward slashes
         return local_hdfs_mirror().resolve().as_uri()
     return os.environ.get("BEN_HDFS_ROOT", "/bigearthnet")
 
@@ -65,6 +64,18 @@ def metadata_store_path() -> str:
 
 def features_path() -> str:
     return join_root("features")
+
+
+def features_v2_path() -> str:
+    return join_root("features_v2")
+
+
+def models_path() -> str:
+    return join_root("models")
+
+
+def predictions_path() -> str:
+    return join_root("predictions")
 
 
 def results_path() -> str:
