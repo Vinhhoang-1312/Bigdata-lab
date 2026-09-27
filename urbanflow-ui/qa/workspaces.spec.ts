@@ -1,5 +1,35 @@
 import { expect, test } from '@playwright/test'
 
+const trainingInformationFixture = {
+  use_status: 'research_only',
+  demand_forecast: {
+    availability: 'available', model_name: 'GTQN-Lite', model_family: 'graph_temporal_quantile_regression',
+    run_id: 'gtqn-20260917-001', use_status: 'research_only', benchmark_status: 'preliminary',
+    lookback_buckets: 336, bucket_minutes: 30, horizon_minutes: 30, zone_count: 263, parameter_count: 1752,
+    best_epoch: 2, training_end_epoch: 10,
+    splits: { train: ['2022-11-01', '2022-11-30'], validation: ['2023-01-01', '2023-01-31'], test: ['2023-02-01', '2023-02-19'] },
+    metrics: { validation_loss: 0.07335 }, weekly_baseline: { wape: 0.62 }, dataset_fingerprint_available: true,
+    dataset_fingerprint_prefix: '44af',
+    distributed_training: { status: 'PASS', world_size: 2, ranks: [0, 1], training_hosts: ['spark-worker-1', 'spark-worker-2'], distinct_host_count: 2, batches: 1752, parameter_checksums_match: true, parameter_checksum_prefixes: ['a96a7086', 'a96a7086'] },
+  },
+  kmeans_anomaly: {
+    availability: 'available', use_status: 'research_only', run_id: 'trip-anomaly-20260926-001', method: 'spark_mllib_kmeans',
+    k: 8, threshold: 2.4, threshold_percentile: 99.5,
+    periods: { training_period: 'November 2022', calibration_period: 'January 2023', screening_period: 'February 2023' },
+    sample_counts: { training_sample_count: 1000, calibration_sample_count: 1000, screened_sample_count: 56912 },
+    features: ['trip_distance', 'trip_duration_minutes', 'fare_amount', 'average_speed_mph'], training_hosts: ['spark-worker-1', 'spark-worker-2'], limitations: ['No verified anomaly labels'],
+  },
+  preprocessing: [
+    { input: 'Source gap', policy: 'No mean/mode fill; pass observed_mask=false', why: 'Separate missing data from zero demand', evidence: 'Tensor observed mask' },
+    { input: 'Time split', policy: 'Chronological train, validation and test', why: 'Prevent leakage', evidence: 'Config split indices' },
+  ],
+  techniques: [
+    { name: 'Spark MLlib K-means', type: 'clustering algorithm', owner_ecosystem: 'Apache Spark', purpose: 'Group trip patterns', how: 'Nearest standardized center', alternative: 'DBSCAN', limit: 'Review signal only' },
+    { name: 'DDP', type: 'distributed training', owner_ecosystem: 'PyTorch', purpose: 'Train one model across workers', how: 'Synchronize gradients', alternative: 'DataParallel', limit: 'Does not improve data' },
+  ],
+  limitations: ['Research artifacts require human review'],
+}
+
 test('streaming views are usable and labelled as replay', async ({ page }, testInfo) => {
   const errors: string[] = []
   page.on('pageerror', error => errors.push(error.message))
@@ -38,6 +68,47 @@ test('ML forecast and information are distinct, with measured uncertainty', asyn
   await page.screenshot({ path: testInfo.outputPath('ml-training-information.png'), fullPage: true })
   expect(errors).toEqual([])
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBe(0)
+})
+
+test('training information explains both ML pipelines and distributed evidence', async ({ page }, testInfo) => {
+  const errors: string[] = []
+  page.on('pageerror', error => errors.push(error.message))
+  await page.route('**/v1/ml/information', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(trainingInformationFixture) }))
+  await page.goto('/ml/information')
+  await expect(page.getByRole('heading', { name: 'Training information' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Training-time evidence' }).getByText('Training-time evidence', { exact: true })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Demand forecasting training pipeline' })).toContainText('336 history buckets')
+  await expect(page.getByRole('region', { name: 'Demand forecasting training pipeline' })).toContainText('Chronological split')
+  await expect(page.getByRole('region', { name: 'Anomaly screening pipeline' })).toContainText('k=8')
+  await expect(page.getByText('Observed mask', { exact: false }).first()).toBeVisible()
+  await expect(page.getByText('No mean/mode fill', { exact: false }).first()).toBeVisible()
+  await expect(page.getByText('spark-worker-1', { exact: true })).toBeVisible()
+  await expect(page.getByText('spark-worker-2', { exact: true })).toBeVisible()
+  await expect(page.getByText('Gloo all-reduce', { exact: true }).first()).toBeVisible()
+  await expect(page.getByText('a96a7086', { exact: true })).toHaveCount(2)
+  await expect(page.getByRole('region', { name: 'Training-time evidence' }).getByText('Training-time evidence', { exact: true })).toBeVisible()
+  const body = page.locator('body')
+  await expect(body).toContainText('do not claim live worker health, accuracy, fraud probability')
+  await expect(body).toContainText('do not prove that workers are currently running')
+  await page.screenshot({ path: testInfo.outputPath('ml-training-information.png'), fullPage: true })
+  expect(errors).toEqual([])
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBe(0)
+})
+
+test('training information keeps demand evidence visible when anomaly artifact is unavailable', async ({ page }) => {
+  const degraded = structuredClone(trainingInformationFixture) as typeof trainingInformationFixture
+  degraded.kmeans_anomaly = { availability: 'unavailable', error: 'artifact_unavailable', use_status: 'research_only' }
+  let failed = false
+  await page.route('**/v1/ml/information', route => route.fulfill(failed
+    ? { status: 503, contentType: 'application/json', body: '{}' }
+    : { status: 200, contentType: 'application/json', body: JSON.stringify(degraded) }))
+  await page.goto('/ml/information')
+  await expect(page.getByRole('region', { name: 'Demand forecasting training pipeline' })).toBeVisible()
+  await expect(page.getByText('Anomaly artifact unavailable', { exact: true })).toBeVisible()
+  failed = true
+  await page.getByRole('button', { name: 'Refresh' }).click()
+  await expect(page.getByText(/Showing cached training information/)).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Demand forecasting training pipeline' })).toBeVisible()
 })
 
 test('trip anomaly review shows scored trips and a selectable pickup to dropoff map', async ({ page }, testInfo) => {

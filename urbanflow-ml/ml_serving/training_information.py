@@ -42,7 +42,7 @@ def _preprocessing() -> list[dict[str, str]]:
     return [
         {"input": "Required Silver fields", "policy": "Invalid or null rows are rejected upstream", "why": "Keep contract violations visible", "evidence": "Foundation validation and Silver contract"},
         {"input": "Demand zero", "policy": "Keep zero when an observed bucket has no pickups", "why": "Zero demand is a real signal", "evidence": "Zero-inclusive demand tensor"},
-        {"input": "Source gap", "policy": "Keep count zero and pass observed_mask=false", "why": "Do not confuse missing source data with zero demand", "evidence": "Tensor observed mask"},
+        {"input": "Source gap", "policy": "No mean/mode fill; keep count zero and pass observed_mask=false", "why": "Do not confuse missing source data with zero demand", "evidence": "Tensor observed mask"},
         {"input": "Seasonal lag unavailable", "policy": "Use numeric zero and add a missing indicator", "why": "The model can learn that the lag was unavailable", "evidence": "Feature builder lag flags"},
         {"input": "GTQN scaling", "policy": "Apply log1p, then per-zone median/IQR from the training split", "why": "Reduce skew without future leakage", "evidence": "RobustZoneScaler"},
         {"input": "K-means required features", "policy": "Invalid non-positive distance/duration and negative fare are rejected; do not fill", "why": "Invented trip measurements distort clusters", "evidence": "Spark eligibility filter"},

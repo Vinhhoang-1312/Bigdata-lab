@@ -5,6 +5,7 @@ import { postForecast, useResource } from './api'
 import { formatCount, wapeLabel } from './format'
 import type { Evidence, Forecast, ForecastOptions } from './types'
 import TripAnomalies from './TripAnomalies'
+import TrainingInformation from './TrainingInformation'
 
 function metricNumber(value: string | number | undefined): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null
@@ -82,7 +83,7 @@ export default function MachineLearning({ viewpoint }: { viewpoint: 'forecast' |
   }
 
   return <div className="workspace-content">
-    {viewpoint === 'kmeans' ? <><div className="page-heading"><div><span className="eyebrow">Machine learning / K-means anomaly</span><h1>Unusual taxi trips</h1><p>Review trips whose distance, duration, fare or speed differs from learned patterns.</p></div></div><TripAnomalies /></> : viewpoint === 'information' ? <div className="page-heading"><div><span className="eyebrow">Machine learning / Training information</span><h1>Training information</h1><p>See the data policy, distributed training evidence and limits of both ML workflows.</p></div></div> : <>
+    {viewpoint === 'kmeans' ? <><div className="page-heading"><div><span className="eyebrow">Machine learning / K-means anomaly</span><h1>Unusual taxi trips</h1><p>Review trips whose distance, duration, fare or speed differs from learned patterns.</p></div></div><TripAnomalies /></> : viewpoint === 'information' ? <><div className="page-heading"><div><span className="eyebrow">Machine learning / Training information</span><h1>Training information</h1><p>See the data policy, distributed training evidence and limits of both ML workflows.</p></div></div><TrainingInformation /></> : <>
     <div className="page-heading"><div><span className="eyebrow">Machine learning / Forecast</span><h1>Pickup demand forecast</h1><p>Estimate pickups in a selected taxi zone for a 30-minute window.</p></div>
       <Tooltip title="Re-read model artifact and evidence"><Button icon={<RefreshCw size={16} />} onClick={() => { void options.refresh(); void evidence.refresh() }} loading={options.loading || evidence.loading}>Refresh</Button></Tooltip>
     </div>
