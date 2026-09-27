@@ -24,10 +24,12 @@ Task 1: complete (commits 0ae7975..af9cde9, tests: focused `test_trip_anomaly_mo
 
 Task 2: complete (commit 2c1ace4; focused pytest 21 passed; full unittest suite 84 tests OK; baseline runtime/serving contracts repaired)
 
-Task 3: complete (uncommitted; focused builder/endpoint tests pass; full unittest suite 88 tests OK)
+Task 3: complete (commit 2ba0415; focused builder/endpoint tests pass; full unittest suite 88 tests OK)
 
 Merge: complete (fetched origin/urbanflow-merge; merged new commits 69342ff and dd6fe0b as 4968789; preserved React/no-Streamlit files in conflicts; restored Task 4 work)
 
-Task 4: complete (uncommitted; TypeScript build pass; focused Playwright route tests 2/2 pass)
+Task 4: complete (commit d50f292; TypeScript build pass; focused Playwright route tests 2/2 pass)
 
-Task 5: complete (uncommitted; Vitest 8/8 pass; TypeScript build pass)
+Task 5: complete (commit b9633a3; Vitest 8/8 pass; TypeScript build pass)
+
+Task 6: complete (commit 39c22b6; Vitest 8/8, TypeScript/build pass; desktop and mobile Playwright anomaly/K-means suites 3/3 pass each; mobile screenshot reviewed with no horizontal overflow)

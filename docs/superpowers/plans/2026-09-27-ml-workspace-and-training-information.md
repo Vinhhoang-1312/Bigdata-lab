@@ -401,32 +401,32 @@ git commit -m "feat(ui): type ML scoring and information APIs"
   existing anomaly map/recenter behavior.
 - Produces: K-means page with `Review queue` and `Check a trip` modes.
 
-- [ ] **Step 1: Add failing end-to-end score test**
+- [x] **Step 1: Add failing end-to-end score test**
 
 Navigate to `/ml/kmeans`, switch to `Check a trip`, select pickup 43 and dropoff
 161, enter valid distance/duration/fare, submit, and assert score, threshold,
 review decision, nearest cluster, reason, units and research warning appear.
 Assert the map is ready and the recenter button returns to the selected zones.
 
-- [ ] **Step 2: Add failing invalid-input and API-failure tests**
+- [x] **Step 2: Add failing invalid-input and API-failure tests**
 
 Assert submit is disabled for blank/invalid values. Mock a 422 and assert inline
 error without clearing inputs. Mock a 503 and assert artifact-unavailable copy;
 the review queue remains independently usable when its cached GET data exists.
 
-- [ ] **Step 3: Implement the form**
+- [x] **Step 3: Implement the form**
 
 Use Ant Design `Select`, `InputNumber`, `Button`, `Alert`, `Tag` and form labels.
 Default to realistic non-extreme example values. Do not ask for speed. State
 next to zone selectors that zones provide map context and are not K-means
 features. Never render score with `%`.
 
-- [ ] **Step 4: Adapt the map without inventing a route**
+- [x] **Step 4: Adapt the map without inventing a route**
 
 Reuse zone geometry and dashed center-to-center line. Preserve CARTO/local
 fallback and the existing recenter control. Do not display a GPS path claim.
 
-- [ ] **Step 5: Run UI tests and visual check**
+- [x] **Step 5: Run UI tests and visual check**
 
 ```powershell
 cd urbanflow-ui
@@ -439,7 +439,7 @@ npx playwright test qa/workspaces.spec.ts --grep "K-means|trip anomaly" --projec
 Inspect screenshots for clipped form labels, hidden units, nested cards,
 horizontal overflow and a map that is blank after mode changes.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```powershell
 git add urbanflow-ui/src/TripAnomalies.tsx urbanflow-ui/src/TripScoreForm.tsx urbanflow-ui/src/TripAnomalyMap.tsx urbanflow-ui/src/styles.css urbanflow-ui/qa/workspaces.spec.ts

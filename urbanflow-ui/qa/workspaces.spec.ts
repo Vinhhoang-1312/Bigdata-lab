@@ -62,6 +62,59 @@ test('trip anomaly review shows scored trips and a selectable pickup to dropoff 
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBe(0)
 })
 
+test('K-means check-a-trip scores one trip and keeps the zone map usable', async ({ page }) => {
+  await page.route('**/v1/anomaly/score', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      run_id: 'trip-anomaly-test', method: 'spark_mllib_kmeans', score: 2.75, threshold: 2.4,
+      review_required: true, nearest_cluster: 3, reason: 'Fare above learned pattern',
+      derived_speed_mph: 14, features_used: ['trip_distance', 'trip_duration_minutes', 'fare_amount', 'average_speed_mph'],
+      use_status: 'research_only',
+    }),
+  }))
+  await page.goto('/ml/kmeans')
+  await page.getByRole('radiogroup', { name: 'K-means mode' }).getByText('Check a trip', { exact: true }).click()
+  await expect(page.locator('.trip-score-form .ant-select-selection-item').nth(0)).toContainText('43')
+  await expect(page.locator('.trip-score-form .ant-select-selection-item').nth(1)).toContainText('161')
+  await page.getByLabel('Trip distance (miles)').fill('4.2')
+  await page.getByLabel('Trip duration (minutes)').fill('18')
+  await page.getByLabel('Fare (USD)').fill('22.5')
+  await page.getByRole('button', { name: 'Score trip' }).click()
+  const scoreForm = page.getByRole('region', { name: 'Check a trip form' })
+  await expect(scoreForm.getByText('Review recommended', { exact: true })).toBeVisible()
+  await expect(scoreForm.getByText('Score 2.75', { exact: true })).toBeVisible()
+  await expect(scoreForm.getByText('Threshold 2.40', { exact: true })).toBeVisible()
+  await expect(scoreForm.getByText('Nearest learned cluster: 3', { exact: true })).toBeVisible()
+  await expect(scoreForm).toContainText('Fare above learned pattern')
+  await expect(scoreForm).toContainText('research_only')
+  await expect(page.locator('.zone-map-shell')).toHaveAttribute('data-ready', 'true', { timeout: 20_000 })
+  await page.getByRole('button', { name: 'Focus selected trip' }).click()
+})
+
+test('K-means check preserves input and queue usability when scoring is unavailable', async ({ page }) => {
+  await page.route('**/v1/anomaly/score', route => route.fulfill({
+    status: 503,
+    contentType: 'application/json',
+    body: JSON.stringify({ detail: 'Trip anomaly artifact is unavailable' }),
+  }))
+  await page.goto('/ml/kmeans')
+  await page.getByRole('radiogroup', { name: 'K-means mode' }).getByText('Check a trip', { exact: true }).click()
+  const scoreForm = page.getByRole('region', { name: 'Check a trip form' })
+  const submit = scoreForm.getByRole('button', { name: 'Score trip' })
+  const distance = page.getByLabel('Trip distance (miles)')
+  await distance.fill('')
+  await expect(submit).toBeDisabled()
+  await distance.fill('4.2')
+  await submit.click()
+  await expect(scoreForm.getByText('Trip scoring unavailable', { exact: true })).toBeVisible()
+  await expect(scoreForm).toContainText('Trip anomaly artifact is unavailable')
+  await expect(distance).toHaveValue('4.2')
+  await page.getByRole('radiogroup', { name: 'K-means mode' }).getByText('Review queue', { exact: true }).click()
+  await expect(page.getByText('56,912', { exact: true })).toBeVisible()
+  await expect(page.locator('.anomaly-item')).toHaveCount(80)
+})
+
 test('viewpoint switching does not reload the document', async ({ page }) => {
   await page.goto('/streaming')
   await expect(page.locator('.zone-item')).toHaveCount(8)
