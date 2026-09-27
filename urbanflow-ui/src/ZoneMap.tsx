@@ -48,7 +48,7 @@ export default function ZoneMap({ geometry, rows, selectedZone, onSelect }: {
         paint: { 'line-color': '#14252d', 'line-width': 3 },
       })
       setStyleVersion(version => version + 1)
-      instance.once('idle', () => setReady(true))
+      setReady(true)
       if (handlersAttached) return
       handlersAttached = true
       instance.on('click', 'zones-fill', (event) => {

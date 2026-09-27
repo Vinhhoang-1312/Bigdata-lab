@@ -109,7 +109,7 @@ export default function TripAnomalyMap({ geometry, trips, selected, onSelect }: 
           if (trip) onSelectRef.current(trip.rank)
         })
       }
-      instance.once('idle', () => setReady(true))
+      setReady(true)
     })
     return () => { instance.remove(); map.current = null }
   }, [geometry])
