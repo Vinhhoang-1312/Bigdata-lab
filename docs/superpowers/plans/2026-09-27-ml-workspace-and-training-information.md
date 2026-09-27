@@ -102,19 +102,19 @@ Do not replace those parts wholesale. Extend and split only where this plan says
 - Consumes: raw distance miles, duration minutes, fare USD, artifact scaler mean/std and cluster centers.
 - Produces: `raw_trip_features(distance_miles: float, duration_minutes: float, fare_usd: float) -> list[float]`, `standardize_features(raw: Sequence[float], mean: Sequence[float], std: Sequence[float]) -> list[float]`, and `score_nearest_cluster(values: Sequence[float], centers: Sequence[Sequence[float]]) -> tuple[int, float, str]`.
 
-- [ ] **Step 1: Write failing tests for raw feature parity**
+- [x] **Step 1: Write failing tests for raw feature parity**
 
 Add `test_raw_trip_features_match_spark_training_formula` asserting the four
 values are `log1p(distance)`, `log1p(duration)`, `log1p(fare)`, and
 `log1p(distance * 60 / duration)` in the same order as the training artifact.
 
-- [ ] **Step 2: Write failing validation tests**
+- [x] **Step 2: Write failing validation tests**
 
 Add table-driven tests asserting `ValueError` for distance `<= 0`, duration
 `<= 0`, fare `< 0`, NaN and infinity. Add tests rejecting non-four-dimensional
 mean/std/center arrays, empty centers, and scaler std `<= 0`.
 
-- [ ] **Step 3: Run focused tests and confirm RED**
+- [x] **Step 3: Run focused tests and confirm RED**
 
 Run:
 
@@ -124,18 +124,18 @@ docker-compose --env-file "C:\Users\DELL\Documents\Big Data\.env" run --rm --no-
 
 Expected: FAIL because the three new functions do not exist.
 
-- [ ] **Step 4: Implement the three pure functions**
+- [x] **Step 4: Implement the three pure functions**
 
 Use `math.log1p`, `math.isfinite`, z-score `(raw - mean) / std`, existing
 `score_distance`, and existing `explain_deviation`. Choose the minimum-distance
 center with deterministic first-index tie behavior. Do not import Spark,
 scikit-learn or pandas.
 
-- [ ] **Step 5: Run focused tests and confirm GREEN**
+- [x] **Step 5: Run focused tests and confirm GREEN**
 
 Expected: all tests in `test_trip_anomaly_model.py` PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```powershell
 git add urbanflow-ml/forecasting/trip_anomaly.py urbanflow-ml/tests/test_trip_anomaly_model.py
