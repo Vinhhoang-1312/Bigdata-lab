@@ -300,14 +300,14 @@ git commit -m "feat(api): expose ML training information"
 - Produces: `ModelView = 'forecast' | 'kmeans' | 'information'`, canonical routes
   `/ml`, `/ml/kmeans`, `/ml/information`, and legacy aliases.
 
-- [ ] **Step 1: Add failing route tests**
+- [x] **Step 1: Add failing route tests**
 
 Update Playwright expectations so ML navigation contains three distinct
 buttons: `Demand forecast`, `K-means anomaly`, `Training information`. Test
 direct canonical reload, browser Back, and direct legacy URLs
 `/ml/anomalies`/`/ml/evidence` rendering the matching workspace.
 
-- [ ] **Step 2: Run the focused Playwright test and confirm RED**
+- [x] **Step 2: Run the focused Playwright test and confirm RED**
 
 With services running:
 
@@ -316,14 +316,14 @@ cd urbanflow-ui
 npx playwright test qa/workspaces.spec.ts --grep "viewpoint URLs" --project=desktop
 ```
 
-- [ ] **Step 3: Implement routing and navigation**
+- [x] **Step 3: Implement routing and navigation**
 
 Replace `Explore/Evidence` ambiguity with three direct sidebar items and Lucide
 icons. `currentRoute()` accepts legacy aliases. `routePath()` emits only
 canonical routes. Remove the forecast/anomaly inner segmented switch from
 `MachineLearning.tsx`; each top-level route owns one purpose.
 
-- [ ] **Step 4: Run TypeScript build and focused route test**
+- [x] **Step 4: Run TypeScript build and focused route test**
 
 ```powershell
 cd urbanflow-ui
@@ -331,7 +331,7 @@ npm run build
 npx playwright test qa/workspaces.spec.ts --grep "viewpoint URLs" --project=desktop
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add urbanflow-ui/src/App.tsx urbanflow-ui/src/MachineLearning.tsx urbanflow-ui/qa/workspaces.spec.ts
