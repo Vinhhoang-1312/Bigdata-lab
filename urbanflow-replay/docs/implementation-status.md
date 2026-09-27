@@ -24,8 +24,8 @@
 
 ## Cross-subproject acceptance
 
-- [ ] Full Replay CLI → Kafka → Streaming Live Gold acceptance without an integration-only adapter.
+- [x] Bounded full Replay CLI → Kafka → Spark Structured Streaming → Live Gold acceptance without an integration-only adapter (2026-09-14 and fresh 2026-09-20 runs; 10,000 events each, zero invalid rows and zero Gold mismatches).
 - [x] Kafka → Spark Structured Streaming acceptance Test G using the authoritative Foundation event shape.
-- [ ] Final end-to-end Velocity experiment with Streaming active.
+- [ ] Final end-to-end Velocity experiment with Streaming active during rate-controlled publication. The earlier 100–5,000 events/sec producer-only measurements and the bounded Live Gold runs do not establish this concurrent condition.
 
-Replay is ready to provide fixture or canonical February events to Streaming.
+Replay is ready to provide fixture or canonical February events to Streaming. The bounded verifier ran Replay before Spark's `availableNow` query; see `../urbanflow-streaming/docs/results/end-to-end-streaming.md` and `end-to-end-streaming-health-20260920.md`. The only deferred Replay cross-subproject gate is the concurrent streaming-active velocity experiment, defined in `../urbanflow-replay/runbooks/run_velocity_experiment.md`. Passing a bounded run does not establish continuous production operation.
