@@ -10,7 +10,10 @@ docker info >nul 2>&1
 if errorlevel 1 goto :docker_error
 
 echo [2/4] Starting storage, Spark, and API services...
-docker compose up -d seaweedfs spark-master spark-worker-1 spark-worker-2 streaming-api ml-api
+docker compose up -d seaweedfs spark-master spark-worker-1 spark-worker-2
+if errorlevel 1 goto :compose_error
+rem Recreate source-mounted APIs so pulled or merged routes cannot stay stale.
+docker compose up -d --force-recreate streaming-api ml-api
 if errorlevel 1 goto :compose_error
 
 echo [3/4] Starting the React application...

@@ -20,6 +20,7 @@ def test_launcher_targets_react_and_not_archived_streamlit():
     assert "5173/ml" in source
     assert "urbanflow-streamlit" not in source
     assert "8501" not in source
+    assert "docker compose up -d --force-recreate streaming-api ml-api" in source
 
 
 @pytest.mark.skipif(

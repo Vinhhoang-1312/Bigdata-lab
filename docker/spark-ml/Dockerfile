@@ -15,6 +15,7 @@ RUN python3 -m pip install --no-cache-dir \
 RUN python3 -m pip install --no-cache-dir --default-timeout=180 --retries=5 \
     boto3==1.40.46 \
     fastapi==0.116.1 \
+    httpx==0.28.1 \
     uvicorn==0.35.0 \
     pytest==8.4.2 \
     streamlit==1.51.0 \

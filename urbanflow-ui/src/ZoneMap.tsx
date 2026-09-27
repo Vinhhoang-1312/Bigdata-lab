@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import maplibregl, { type GeoJSONSource, type Map as MapLibreMap } from 'maplibre-gl'
+import * as maplibregl from 'maplibre-gl'
+import type { GeoJSONSource, Map as MapLibreMap } from 'maplibre-gl'
 import type { ZoneRow } from './types'
 import { demandClass } from './zoneClass'
 import { CARTO_POSITRON_STYLE, fallBackToLocalBasemap, firstLabelLayer } from './basemap'

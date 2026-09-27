@@ -56,7 +56,7 @@ test('ML forecast and information are distinct, with measured uncertainty', asyn
   page.on('pageerror', error => errors.push(error.message))
   await page.goto('/ml')
   await expect(page.getByRole('heading', { name: 'Pickup demand forecast' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Run forecast' })).toBeEnabled()
+  await expect(page.getByRole('button', { name: 'Run forecast' })).toBeEnabled({ timeout: 30_000 })
   await page.getByRole('button', { name: 'Run forecast' }).click()
   await expect(page.getByText('Central estimate · P50')).toBeVisible({ timeout: 30_000 })
   await expect(page.getByText('Estimated range · P10–P90')).toBeVisible()

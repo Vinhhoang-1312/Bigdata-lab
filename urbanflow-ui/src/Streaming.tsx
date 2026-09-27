@@ -66,7 +66,7 @@ export default function Streaming({ viewpoint }: { viewpoint: 'dispatch' | 'reli
     {(overview.error || health.error) && <Alert type="warning" showIcon message="Source unavailable" description={`${overview.error ?? health.error}. ${data ? 'Showing the last cached snapshot with its original time.' : 'No snapshot is available.'}`} />}
     {data && <div className={`source-strip ${isReplay ? 'replay' : ''}`}><span className="source-dot" /><strong>{sourceLabel(data.source_mode)}</strong><span>{dateLabel}</span><span className="source-detail">5-minute Gold window · America/New_York</span></div>}
 
-    {!data && overview.loading ? <div className="loading-space"><Spin tip="Reading Gold snapshot" size="large"><div /></Spin></div> : mode === 'playback' && viewpoint === 'dispatch' ? null : !data || data.status === 'empty' ? <Empty description="No Gold window has been produced yet" /> : viewpoint === 'dispatch' ? <>
+    {!data && overview.loading ? <div className="loading-space"><Spin tip="Reading Gold snapshot" size="large"><div /></Spin></div> : !data && mode === 'playback' && viewpoint === 'dispatch' ? null : !data || data.status === 'empty' ? <Empty description="No Gold window has been produced yet" /> : viewpoint === 'dispatch' ? <>
       <div className="metrics-band">
         <Metric label="Pickups in window" value={formatCount(data.current_trip_count)} />
         <Metric label="Zones with pickups" value={formatCount(data.latest_rows.length)} />
