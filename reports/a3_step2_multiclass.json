@@ -1,0 +1,1370 @@
+{
+  "step": "A3-Step2",
+  "rules": {
+    "random_split_used": false,
+    "validation_tuning_only": true,
+    "test_used_once_after_selection": true
+  },
+  "selected_top_classes": [
+    "Pastures",
+    "Arable land",
+    "Marine waters",
+    "Land principally occupied by agriculture, with significant areas of natural vegetation",
+    "Coniferous forest",
+    "Mixed forest",
+    "Broad-leaved forest",
+    "Complex cultivation patterns",
+    "Urban fabric",
+    "Transitional woodland, shrub",
+    "Inland wetlands",
+    "Inland waters",
+    "Permanent crops",
+    "Moors, heathland and sclerophyllous vegetation",
+    "Industrial or commercial units",
+    "Natural grassland and sparsely vegetated areas",
+    "Beaches, dunes, sands",
+    "Coastal wetlands"
+  ],
+  "class_counts_per_split": {
+    "train": [
+      {
+        "target": "Marine waters",
+        "count": 4966
+      },
+      {
+        "target": "Pastures",
+        "count": 1714
+      },
+      {
+        "target": "Arable land",
+        "count": 442
+      },
+      {
+        "target": "Inland waters",
+        "count": 89
+      },
+      {
+        "target": "Inland wetlands",
+        "count": 86
+      },
+      {
+        "target": "Broad-leaved forest",
+        "count": 64
+      },
+      {
+        "target": "Urban fabric",
+        "count": 33
+      },
+      {
+        "target": "Coniferous forest",
+        "count": 10
+      },
+      {
+        "target": "Moors, heathland and sclerophyllous vegetation",
+        "count": 6
+      },
+      {
+        "target": "Natural grassland and sparsely vegetated areas",
+        "count": 4
+      },
+      {
+        "target": "Permanent crops",
+        "count": 3
+      },
+      {
+        "target": "Mixed forest",
+        "count": 3
+      },
+      {
+        "target": "Land principally occupied by agriculture, with significant areas of natural vegetation",
+        "count": 1
+      }
+    ],
+    "validation": [
+      {
+        "target": "Pastures",
+        "count": 947
+      },
+      {
+        "target": "Marine waters",
+        "count": 819
+      },
+      {
+        "target": "Arable land",
+        "count": 353
+      },
+      {
+        "target": "Broad-leaved forest",
+        "count": 78
+      },
+      {
+        "target": "Inland wetlands",
+        "count": 57
+      },
+      {
+        "target": "Inland waters",
+        "count": 19
+      },
+      {
+        "target": "Coniferous forest",
+        "count": 6
+      },
+      {
+        "target": "Urban fabric",
+        "count": 4
+      }
+    ],
+    "test": [
+      {
+        "target": "Pastures",
+        "count": 738
+      },
+      {
+        "target": "Arable land",
+        "count": 363
+      },
+      {
+        "target": "Marine waters",
+        "count": 103
+      },
+      {
+        "target": "Inland wetlands",
+        "count": 13
+      },
+      {
+        "target": "Mixed forest",
+        "count": 6
+      },
+      {
+        "target": "Coniferous forest",
+        "count": 5
+      },
+      {
+        "target": "Broad-leaved forest",
+        "count": 4
+      },
+      {
+        "target": "Moors, heathland and sclerophyllous vegetation",
+        "count": 3
+      },
+      {
+        "target": "Complex cultivation patterns",
+        "count": 2
+      }
+    ]
+  },
+  "grid_results": [
+    {
+      "model_name": "lr",
+      "best": {
+        "model": "lr",
+        "config_id": 0,
+        "params": {
+          "regParam": 0.0,
+          "elasticNetParam": 0.0
+        },
+        "validation_macro_f1": 0.7349147049675733,
+        "training_time_sec": 20.537
+      },
+      "grid_results": [
+        {
+          "model": "lr",
+          "config_id": 0,
+          "params": {
+            "regParam": 0.0,
+            "elasticNetParam": 0.0
+          },
+          "validation_macro_f1": 0.7349147049675733,
+          "training_time_sec": 20.537
+        },
+        {
+          "model": "lr",
+          "config_id": 1,
+          "params": {
+            "regParam": 0.0,
+            "elasticNetParam": 0.5
+          },
+          "validation_macro_f1": 0.7349147049675733,
+          "training_time_sec": 14.593
+        },
+        {
+          "model": "lr",
+          "config_id": 2,
+          "params": {
+            "regParam": 0.01,
+            "elasticNetParam": 0.0
+          },
+          "validation_macro_f1": 0.6843975472751165,
+          "training_time_sec": 12.204
+        },
+        {
+          "model": "lr",
+          "config_id": 3,
+          "params": {
+            "regParam": 0.01,
+            "elasticNetParam": 0.5
+          },
+          "validation_macro_f1": 0.6233090386195854,
+          "training_time_sec": 15.317
+        }
+      ]
+    },
+    {
+      "model_name": "rf",
+      "best": {
+        "model": "rf",
+        "config_id": 3,
+        "params": {
+          "numTrees": 40,
+          "maxDepth": 8
+        },
+        "validation_macro_f1": 0.8449226118377082,
+        "training_time_sec": 5.544
+      },
+      "grid_results": [
+        {
+          "model": "rf",
+          "config_id": 0,
+          "params": {
+            "numTrees": 20,
+            "maxDepth": 5
+          },
+          "validation_macro_f1": 0.7965153629728694,
+          "training_time_sec": 6.141
+        },
+        {
+          "model": "rf",
+          "config_id": 1,
+          "params": {
+            "numTrees": 20,
+            "maxDepth": 8
+          },
+          "validation_macro_f1": 0.8278487324522648,
+          "training_time_sec": 6.473
+        },
+        {
+          "model": "rf",
+          "config_id": 2,
+          "params": {
+            "numTrees": 40,
+            "maxDepth": 5
+          },
+          "validation_macro_f1": 0.813861386043377,
+          "training_time_sec": 4.431
+        },
+        {
+          "model": "rf",
+          "config_id": 3,
+          "params": {
+            "numTrees": 40,
+            "maxDepth": 8
+          },
+          "validation_macro_f1": 0.8449226118377082,
+          "training_time_sec": 5.544
+        }
+      ]
+    },
+    {
+      "model_name": "gbt_ovr",
+      "best": {
+        "model": "gbt_ovr",
+        "config_id": 1,
+        "params": {
+          "maxIter": 10,
+          "maxDepth": 3
+        },
+        "validation_macro_f1": 0.7669769784282354,
+        "training_time_sec": 83.295
+      },
+      "grid_results": [
+        {
+          "model": "gbt_ovr",
+          "config_id": 0,
+          "params": {
+            "maxIter": 5,
+            "maxDepth": 3
+          },
+          "validation_macro_f1": 0.7152813384572574,
+          "training_time_sec": 54.915
+        },
+        {
+          "model": "gbt_ovr",
+          "config_id": 1,
+          "params": {
+            "maxIter": 10,
+            "maxDepth": 3
+          },
+          "validation_macro_f1": 0.7669769784282354,
+          "training_time_sec": 83.295
+        }
+      ]
+    }
+  ],
+  "best_model_name": "rf",
+  "label_index_mapping": [
+    {
+      "label_index": 0.0,
+      "class": "Marine waters"
+    },
+    {
+      "label_index": 1.0,
+      "class": "Pastures"
+    },
+    {
+      "label_index": 2.0,
+      "class": "Arable land"
+    },
+    {
+      "label_index": 3.0,
+      "class": "Inland waters"
+    },
+    {
+      "label_index": 4.0,
+      "class": "Inland wetlands"
+    },
+    {
+      "label_index": 5.0,
+      "class": "Broad-leaved forest"
+    },
+    {
+      "label_index": 6.0,
+      "class": "Urban fabric"
+    },
+    {
+      "label_index": 7.0,
+      "class": "Coniferous forest"
+    },
+    {
+      "label_index": 8.0,
+      "class": "Moors, heathland and sclerophyllous vegetation"
+    },
+    {
+      "label_index": 9.0,
+      "class": "Natural grassland and sparsely vegetated areas"
+    },
+    {
+      "label_index": 10.0,
+      "class": "Mixed forest"
+    },
+    {
+      "label_index": 11.0,
+      "class": "Permanent crops"
+    },
+    {
+      "label_index": 12.0,
+      "class": "Land principally occupied by agriculture, with significant areas of natural vegetation"
+    }
+  ],
+  "test_metrics": {
+    "n": 1237,
+    "accuracy": 0.957962813257882,
+    "weighted_f1": 0.9547241971209857,
+    "macro_f1": 0.5110389114220532,
+    "per_class": [
+      {
+        "label_index": 1.0,
+        "precision": 0.9571428571428572,
+        "recall": 0.9986449864498645,
+        "f1": 0.9774535809018567,
+        "tp": 737,
+        "fp": 33,
+        "fn": 1
+      },
+      {
+        "label_index": 0.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "tp": 103,
+        "fp": 0,
+        "fn": 0
+      },
+      {
+        "label_index": 2.0,
+        "precision": 0.9852507374631269,
+        "recall": 0.9201101928374655,
+        "f1": 0.9515669515669515,
+        "tp": 334,
+        "fp": 5,
+        "fn": 29
+      },
+      {
+        "label_index": 7.0,
+        "precision": 0.42857142857142855,
+        "recall": 0.6,
+        "f1": 0.5,
+        "tp": 3,
+        "fp": 4,
+        "fn": 2
+      },
+      {
+        "label_index": 4.0,
+        "precision": 0.38461538461538464,
+        "recall": 0.38461538461538464,
+        "f1": 0.38461538461538464,
+        "tp": 5,
+        "fp": 8,
+        "fn": 8
+      },
+      {
+        "label_index": 13.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "tp": 0,
+        "fp": 0,
+        "fn": 2
+      },
+      {
+        "label_index": 10.0,
+        "precision": 1.0,
+        "recall": 0.16666666666666666,
+        "f1": 0.2857142857142857,
+        "tp": 1,
+        "fp": 0,
+        "fn": 5
+      },
+      {
+        "label_index": 5.0,
+        "precision": 0.5,
+        "recall": 0.5,
+        "f1": 0.5,
+        "tp": 2,
+        "fp": 2,
+        "fn": 2
+      },
+      {
+        "label_index": 8.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "tp": 0,
+        "fp": 0,
+        "fn": 3
+      }
+    ],
+    "confusion_rows": [
+      {
+        "label": 0.0,
+        "0.0": 103,
+        "1.0": 0,
+        "2.0": 0,
+        "4.0": 0,
+        "5.0": 0,
+        "7.0": 0,
+        "10.0": 0
+      },
+      {
+        "label": 1.0,
+        "0.0": 0,
+        "1.0": 737,
+        "2.0": 1,
+        "4.0": 0,
+        "5.0": 0,
+        "7.0": 0,
+        "10.0": 0
+      },
+      {
+        "label": 2.0,
+        "0.0": 0,
+        "1.0": 24,
+        "2.0": 334,
+        "4.0": 4,
+        "5.0": 1,
+        "7.0": 0,
+        "10.0": 0
+      },
+      {
+        "label": 4.0,
+        "0.0": 0,
+        "1.0": 5,
+        "2.0": 3,
+        "4.0": 5,
+        "5.0": 0,
+        "7.0": 0,
+        "10.0": 0
+      },
+      {
+        "label": 5.0,
+        "0.0": 0,
+        "1.0": 0,
+        "2.0": 0,
+        "4.0": 2,
+        "5.0": 2,
+        "7.0": 0,
+        "10.0": 0
+      },
+      {
+        "label": 7.0,
+        "0.0": 0,
+        "1.0": 1,
+        "2.0": 0,
+        "4.0": 0,
+        "5.0": 1,
+        "7.0": 3,
+        "10.0": 0
+      },
+      {
+        "label": 8.0,
+        "0.0": 0,
+        "1.0": 2,
+        "2.0": 0,
+        "4.0": 1,
+        "5.0": 0,
+        "7.0": 0,
+        "10.0": 0
+      },
+      {
+        "label": 10.0,
+        "0.0": 0,
+        "1.0": 0,
+        "2.0": 0,
+        "4.0": 1,
+        "5.0": 0,
+        "7.0": 4,
+        "10.0": 1
+      },
+      {
+        "label": 13.0,
+        "0.0": 0,
+        "1.0": 1,
+        "2.0": 1,
+        "4.0": 0,
+        "5.0": 0,
+        "7.0": 0,
+        "10.0": 0
+      }
+    ]
+  },
+  "assignment2_baselines": {
+    "majority": {
+      "n": 6371,
+      "accuracy": 0.5542301051640245,
+      "macro_f1": 0.2377297515653403,
+      "per_class": [
+        {
+          "class": "Pastures",
+          "precision": 0.5542301051640245,
+          "recall": 1.0,
+          "f1": 0.7131892546960209,
+          "tp": 3531,
+          "fp": 2840,
+          "fn": 0
+        },
+        {
+          "class": "Arable land",
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 2732
+        },
+        {
+          "class": "Marine waters",
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 108
+        }
+      ]
+    },
+    "rule": {
+      "n": 6371,
+      "accuracy": 0.8165123214566002,
+      "macro_f1": 0.8582080055851588,
+      "per_class": [
+        {
+          "class": "Pastures",
+          "precision": 0.7933002481389578,
+          "recall": 0.9054092325120362,
+          "f1": 0.8456553365956883,
+          "tp": 3197,
+          "fp": 833,
+          "fn": 334
+        },
+        {
+          "class": "Arable land",
+          "precision": 0.8516360376512775,
+          "recall": 0.6954612005856515,
+          "f1": 0.7656659278662099,
+          "tp": 1900,
+          "fp": 331,
+          "fn": 832
+        },
+        {
+          "class": "Marine waters",
+          "precision": 0.9545454545454546,
+          "recall": 0.9722222222222222,
+          "f1": 0.963302752293578,
+          "tp": 105,
+          "fp": 5,
+          "fn": 3
+        }
+      ]
+    },
+    "centroid_full": {
+      "n": 6371,
+      "accuracy": 0.7998744310155391,
+      "macro_f1": 0.8365644270406535,
+      "per_class": [
+        {
+          "class": "Pastures",
+          "precision": 0.7695984703632888,
+          "recall": 0.9119229679977343,
+          "f1": 0.8347375243033053,
+          "tp": 3220,
+          "fp": 964,
+          "fn": 311
+        },
+        {
+          "class": "Arable land",
+          "precision": 0.8551424432641236,
+          "recall": 0.6482430453879942,
+          "f1": 0.737455756818655,
+          "tp": 1771,
+          "fp": 300,
+          "fn": 961
+        },
+        {
+          "class": "Marine waters",
+          "precision": 0.9051724137931034,
+          "recall": 0.9722222222222222,
+          "f1": 0.9375,
+          "tp": 105,
+          "fp": 11,
+          "fn": 3
+        }
+      ]
+    },
+    "centroid_reduced": {
+      "n": 6371,
+      "accuracy": 0.809135143619526,
+      "macro_f1": 0.852584805408778,
+      "per_class": [
+        {
+          "class": "Pastures",
+          "precision": 0.8312839576780098,
+          "recall": 0.8232795242141037,
+          "f1": 0.8272623790552078,
+          "tp": 2907,
+          "fp": 590,
+          "fn": 624
+        },
+        {
+          "class": "Arable land",
+          "precision": 0.7761680550525172,
+          "recall": 0.7844070278184481,
+          "f1": 0.7802657928272346,
+          "tp": 2143,
+          "fp": 618,
+          "fn": 589
+        },
+        {
+          "class": "Marine waters",
+          "precision": 0.9292035398230089,
+          "recall": 0.9722222222222222,
+          "f1": 0.9502262443438914,
+          "tp": 105,
+          "fp": 8,
+          "fn": 3
+        }
+      ]
+    }
+  },
+  "interpretation": {
+    "rf_feature_importances": [
+      {
+        "feature": "ndvi_p10",
+        "importance": 0.08511343306688679
+      },
+      {
+        "feature": "mean_b11",
+        "importance": 0.06343696785622768
+      },
+      {
+        "feature": "mean_b12",
+        "importance": 0.05668258416603167
+      },
+      {
+        "feature": "brightness",
+        "importance": 0.049667692819456516
+      },
+      {
+        "feature": "mean_b03",
+        "importance": 0.0494145748281563
+      },
+      {
+        "feature": "ndwi",
+        "importance": 0.048522781836546194
+      },
+      {
+        "feature": "mean_b08",
+        "importance": 0.04413168737403685
+      },
+      {
+        "feature": "mean_b8a",
+        "importance": 0.04410711222415739
+      },
+      {
+        "feature": "ndvi_p90",
+        "importance": 0.040444508436612674
+      },
+      {
+        "feature": "mean_b06",
+        "importance": 0.040441175805393616
+      },
+      {
+        "feature": "mean_b02",
+        "importance": 0.03850517047858738
+      },
+      {
+        "feature": "ndvi_p50",
+        "importance": 0.03690274352720551
+      },
+      {
+        "feature": "ndmi",
+        "importance": 0.03560645282598578
+      },
+      {
+        "feature": "ndvi",
+        "importance": 0.032921715230243676
+      },
+      {
+        "feature": "std_b08",
+        "importance": 0.03262161456115898
+      },
+      {
+        "feature": "mean_b05",
+        "importance": 0.03166005353373034
+      },
+      {
+        "feature": "std_b02",
+        "importance": 0.03130504783229733
+      },
+      {
+        "feature": "std_b11",
+        "importance": 0.030670953926975653
+      },
+      {
+        "feature": "ndbi",
+        "importance": 0.02739182045378339
+      },
+      {
+        "feature": "mean_b04",
+        "importance": 0.02655946299797951
+      },
+      {
+        "feature": "mean_b07",
+        "importance": 0.025625545253748327
+      },
+      {
+        "feature": "std_b07",
+        "importance": 0.025568932623128687
+      },
+      {
+        "feature": "std_b12",
+        "importance": 0.020043994966732297
+      },
+      {
+        "feature": "std_b06",
+        "importance": 0.019127408375342745
+      },
+      {
+        "feature": "std_b8a",
+        "importance": 0.017552617069541865
+      },
+      {
+        "feature": "std_b03",
+        "importance": 0.01750524169814212
+      },
+      {
+        "feature": "std_b04",
+        "importance": 0.017211008231527523
+      },
+      {
+        "feature": "std_b05",
+        "importance": 0.011257698000383193
+      }
+    ],
+    "lr_coefficients": [
+      {
+        "feature": "std_b05",
+        "mean_abs_coef": 7.608969861748101
+      },
+      {
+        "feature": "mean_b12",
+        "mean_abs_coef": 6.719435650873768
+      },
+      {
+        "feature": "std_b11",
+        "mean_abs_coef": 6.450031145186122
+      },
+      {
+        "feature": "ndvi_p10",
+        "mean_abs_coef": 6.254718849490115
+      },
+      {
+        "feature": "mean_b05",
+        "mean_abs_coef": 5.962453291954153
+      },
+      {
+        "feature": "mean_b11",
+        "mean_abs_coef": 5.653368082598031
+      },
+      {
+        "feature": "mean_b03",
+        "mean_abs_coef": 5.639195033240212
+      },
+      {
+        "feature": "mean_b08",
+        "mean_abs_coef": 5.597732944226422
+      },
+      {
+        "feature": "mean_b8a",
+        "mean_abs_coef": 5.575541309703928
+      },
+      {
+        "feature": "mean_b06",
+        "mean_abs_coef": 5.466895845721496
+      },
+      {
+        "feature": "std_b12",
+        "mean_abs_coef": 5.447921796136597
+      },
+      {
+        "feature": "brightness",
+        "mean_abs_coef": 5.309441999093111
+      },
+      {
+        "feature": "ndmi",
+        "mean_abs_coef": 4.92710434234414
+      },
+      {
+        "feature": "ndbi",
+        "mean_abs_coef": 4.92710434234414
+      },
+      {
+        "feature": "ndwi",
+        "mean_abs_coef": 4.883220633122867
+      },
+      {
+        "feature": "std_b03",
+        "mean_abs_coef": 4.878285120751618
+      },
+      {
+        "feature": "std_b08",
+        "mean_abs_coef": 4.826543267339244
+      },
+      {
+        "feature": "std_b02",
+        "mean_abs_coef": 4.801781269453251
+      },
+      {
+        "feature": "std_b8a",
+        "mean_abs_coef": 4.775442743612736
+      },
+      {
+        "feature": "mean_b07",
+        "mean_abs_coef": 4.742515297452678
+      },
+      {
+        "feature": "std_b04",
+        "mean_abs_coef": 4.699613510265196
+      },
+      {
+        "feature": "std_b06",
+        "mean_abs_coef": 4.202282889854415
+      },
+      {
+        "feature": "std_b07",
+        "mean_abs_coef": 4.065571864228672
+      },
+      {
+        "feature": "ndvi_p90",
+        "mean_abs_coef": 4.0468234811833295
+      },
+      {
+        "feature": "ndvi_p50",
+        "mean_abs_coef": 3.816862057862436
+      },
+      {
+        "feature": "mean_b04",
+        "mean_abs_coef": 3.7363585510413775
+      },
+      {
+        "feature": "ndvi",
+        "mean_abs_coef": 3.5567314247136346
+      },
+      {
+        "feature": "mean_b02",
+        "mean_abs_coef": 3.464739310949032
+      }
+    ]
+  },
+  "top_k_retrain": [
+    {
+      "k": 5,
+      "features": [
+        "ndvi_p10",
+        "mean_b11",
+        "mean_b12",
+        "brightness",
+        "mean_b03"
+      ],
+      "training_time_sec": 18.836,
+      "test_metrics": {
+        "n": 1237,
+        "accuracy": 0.7930476960388035,
+        "weighted_f1": 0.8606150614433026,
+        "macro_f1": 0.4387072132238183,
+        "per_class": [
+          {
+            "label_index": 1.0,
+            "precision": 0.9626998223801065,
+            "recall": 0.7344173441734417,
+            "f1": 0.8332052267486548,
+            "tp": 542,
+            "fp": 21,
+            "fn": 196
+          },
+          {
+            "label_index": 0.0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "tp": 103,
+            "fp": 0,
+            "fn": 0
+          },
+          {
+            "label_index": 2.0,
+            "precision": 0.9731343283582089,
+            "recall": 0.8980716253443526,
+            "f1": 0.9340974212034383,
+            "tp": 326,
+            "fp": 9,
+            "fn": 37
+          },
+          {
+            "label_index": 7.0,
+            "precision": 0.375,
+            "recall": 0.6,
+            "f1": 0.4615384615384615,
+            "tp": 3,
+            "fp": 5,
+            "fn": 2
+          },
+          {
+            "label_index": 4.0,
+            "precision": 0.16666666666666666,
+            "recall": 0.15384615384615385,
+            "f1": 0.16,
+            "tp": 2,
+            "fp": 10,
+            "fn": 11
+          },
+          {
+            "label_index": 13.0,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "tp": 0,
+            "fp": 0,
+            "fn": 2
+          },
+          {
+            "label_index": 10.0,
+            "precision": 1.0,
+            "recall": 0.3333333333333333,
+            "f1": 0.5,
+            "tp": 2,
+            "fp": 0,
+            "fn": 4
+          },
+          {
+            "label_index": 5.0,
+            "precision": 0.01694915254237288,
+            "recall": 0.25,
+            "f1": 0.031746031746031744,
+            "tp": 1,
+            "fp": 58,
+            "fn": 3
+          },
+          {
+            "label_index": 8.0,
+            "precision": 0.014184397163120567,
+            "recall": 0.6666666666666666,
+            "f1": 0.027777777777777776,
+            "tp": 2,
+            "fp": 139,
+            "fn": 1
+          }
+        ],
+        "confusion_rows": [
+          {
+            "label": 0.0,
+            "0.0": 103,
+            "1.0": 0,
+            "2.0": 0,
+            "4.0": 0,
+            "5.0": 0,
+            "6.0": 0,
+            "7.0": 0,
+            "8.0": 0,
+            "9.0": 0,
+            "10.0": 0,
+            "11.0": 0
+          },
+          {
+            "label": 1.0,
+            "0.0": 0,
+            "1.0": 542,
+            "2.0": 8,
+            "4.0": 4,
+            "5.0": 56,
+            "6.0": 5,
+            "7.0": 0,
+            "8.0": 123,
+            "9.0": 0,
+            "10.0": 0,
+            "11.0": 0
+          },
+          {
+            "label": 2.0,
+            "0.0": 0,
+            "1.0": 15,
+            "2.0": 326,
+            "4.0": 5,
+            "5.0": 0,
+            "6.0": 7,
+            "7.0": 0,
+            "8.0": 9,
+            "9.0": 0,
+            "10.0": 0,
+            "11.0": 1
+          },
+          {
+            "label": 4.0,
+            "0.0": 0,
+            "1.0": 5,
+            "2.0": 0,
+            "4.0": 2,
+            "5.0": 0,
+            "6.0": 0,
+            "7.0": 1,
+            "8.0": 4,
+            "9.0": 1,
+            "10.0": 0,
+            "11.0": 0
+          },
+          {
+            "label": 5.0,
+            "0.0": 0,
+            "1.0": 0,
+            "2.0": 0,
+            "4.0": 0,
+            "5.0": 1,
+            "6.0": 0,
+            "7.0": 0,
+            "8.0": 3,
+            "9.0": 0,
+            "10.0": 0,
+            "11.0": 0
+          },
+          {
+            "label": 7.0,
+            "0.0": 0,
+            "1.0": 0,
+            "2.0": 0,
+            "4.0": 0,
+            "5.0": 2,
+            "6.0": 0,
+            "7.0": 3,
+            "8.0": 0,
+            "9.0": 0,
+            "10.0": 0,
+            "11.0": 0
+          },
+          {
+            "label": 8.0,
+            "0.0": 0,
+            "1.0": 0,
+            "2.0": 0,
+            "4.0": 1,
+            "5.0": 0,
+            "6.0": 0,
+            "7.0": 0,
+            "8.0": 2,
+            "9.0": 0,
+            "10.0": 0,
+            "11.0": 0
+          },
+          {
+            "label": 10.0,
+            "0.0": 0,
+            "1.0": 0,
+            "2.0": 0,
+            "4.0": 0,
+            "5.0": 0,
+            "6.0": 0,
+            "7.0": 4,
+            "8.0": 0,
+            "9.0": 0,
+            "10.0": 2,
+            "11.0": 0
+          },
+          {
+            "label": 13.0,
+            "0.0": 0,
+            "1.0": 1,
+            "2.0": 1,
+            "4.0": 0,
+            "5.0": 0,
+            "6.0": 0,
+            "7.0": 0,
+            "8.0": 0,
+            "9.0": 0,
+            "10.0": 0,
+            "11.0": 0
+          }
+        ]
+      }
+    },
+    {
+      "k": 10,
+      "features": [
+        "ndvi_p10",
+        "mean_b11",
+        "mean_b12",
+        "brightness",
+        "mean_b03",
+        "ndwi",
+        "mean_b08",
+        "mean_b8a",
+        "ndvi_p90",
+        "mean_b06"
+      ],
+      "training_time_sec": 18.157,
+      "test_metrics": {
+        "n": 1237,
+        "accuracy": 0.814874696847211,
+        "weighted_f1": 0.8807475673272988,
+        "macro_f1": 0.44265271264765754,
+        "per_class": [
+          {
+            "label_index": 1.0,
+            "precision": 0.9725557461406518,
+            "recall": 0.7682926829268293,
+            "f1": 0.858440575321726,
+            "tp": 567,
+            "fp": 16,
+            "fn": 171
+          },
+          {
+            "label_index": 0.0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "tp": 103,
+            "fp": 0,
+            "fn": 0
+          },
+          {
+            "label_index": 2.0,
+            "precision": 0.993920972644377,
+            "recall": 0.9008264462809917,
+            "f1": 0.9450867052023121,
+            "tp": 327,
+            "fp": 2,
+            "fn": 36
+          },
+          {
+            "label_index": 7.0,
+            "precision": 0.16666666666666666,
+            "recall": 0.2,
+            "f1": 0.1818181818181818,
+            "tp": 1,
+            "fp": 5,
+            "fn": 4
+          },
+          {
+            "label_index": 4.0,
+            "precision": 0.42857142857142855,
+            "recall": 0.46153846153846156,
+            "f1": 0.4444444444444445,
+            "tp": 6,
+            "fp": 8,
+            "fn": 7
+          },
+          {
+            "label_index": 13.0,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "tp": 0,
+            "fp": 0,
+            "fn": 2
+          },
+          {
+            "label_index": 10.0,
+            "precision": 1.0,
+            "recall": 0.3333333333333333,
+            "f1": 0.5,
+            "tp": 2,
+            "fp": 0,
+            "fn": 4
+          },
+          {
+            "label_index": 5.0,
+            "precision": 0.021739130434782608,
+            "recall": 0.25,
+            "f1": 0.04,
+            "tp": 1,
+            "fp": 45,
+            "fn": 3
+          },
+          {
+            "label_index": 8.0,
+            "precision": 0.007194244604316547,
+            "recall": 0.3333333333333333,
+            "f1": 0.01408450704225352,
+            "tp": 1,
+            "fp": 138,
+            "fn": 2
+          }
+        ],
+        "confusion_rows": [
+          {
+            "label": 0.0,
+            "0.0": 103,
+            "1.0": 0,
+            "2.0": 0,
+            "4.0": 0,
+            "5.0": 0,
+            "6.0": 0,
+            "7.0": 0,
+            "8.0": 0,
+            "9.0": 0,
+            "10.0": 0,
+            "11.0": 0
+          },
+          {
+            "label": 1.0,
+            "0.0": 0,
+            "1.0": 567,
+            "2.0": 1,
+            "4.0": 0,
+            "5.0": 42,
+            "6.0": 0,
+            "7.0": 0,
+            "8.0": 124,
+            "9.0": 4,
+            "10.0": 0,
+            "11.0": 0
+          },
+          {
+            "label": 2.0,
+            "0.0": 0,
+            "1.0": 11,
+            "2.0": 327,
+            "4.0": 6,
+            "5.0": 0,
+            "6.0": 6,
+            "7.0": 0,
+            "8.0": 10,
+            "9.0": 1,
+            "10.0": 0,
+            "11.0": 2
+          },
+          {
+            "label": 4.0,
+            "0.0": 0,
+            "1.0": 3,
+            "2.0": 0,
+            "4.0": 6,
+            "5.0": 0,
+            "6.0": 0,
+            "7.0": 1,
+            "8.0": 1,
+            "9.0": 0,
+            "10.0": 0,
+            "11.0": 2
+          },
+          {
+            "label": 5.0,
+            "0.0": 0,
+            "1.0": 0,
+            "2.0": 0,
+            "4.0": 0,
+            "5.0": 1,
+            "6.0": 0,
+            "7.0": 0,
+            "8.0": 3,
+            "9.0": 0,
+            "10.0": 0,
+            "11.0": 0
+          },
+          {
+            "label": 7.0,
+            "0.0": 0,
+            "1.0": 1,
+            "2.0": 0,
+            "4.0": 0,
+            "5.0": 3,
+            "6.0": 0,
+            "7.0": 1,
+            "8.0": 0,
+            "9.0": 0,
+            "10.0": 0,
+            "11.0": 0
+          },
+          {
+            "label": 8.0,
+            "0.0": 0,
+            "1.0": 0,
+            "2.0": 0,
+            "4.0": 2,
+            "5.0": 0,
+            "6.0": 0,
+            "7.0": 0,
+            "8.0": 1,
+            "9.0": 0,
+            "10.0": 0,
+            "11.0": 0
+          },
+          {
+            "label": 10.0,
+            "0.0": 0,
+            "1.0": 0,
+            "2.0": 0,
+            "4.0": 0,
+            "5.0": 0,
+            "6.0": 0,
+            "7.0": 4,
+            "8.0": 0,
+            "9.0": 0,
+            "10.0": 2,
+            "11.0": 0
+          },
+          {
+            "label": 13.0,
+            "0.0": 0,
+            "1.0": 1,
+            "2.0": 1,
+            "4.0": 0,
+            "5.0": 0,
+            "6.0": 0,
+            "7.0": 0,
+            "8.0": 0,
+            "9.0": 0,
+            "10.0": 0,
+            "11.0": 0
+          }
+        ]
+      }
+    }
+  ]
+}

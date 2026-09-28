@@ -145,3 +145,51 @@ python scripts/hdf5_partition_benchmark.py --partitions 4 8
 ```
 
 This writes `reports/step2_partition_benchmark.json` and `reports/spark_ui_evidence.json` without overwriting the production feature output. The strict requirement checklist is in `reports/REQUIREMENT_AUDIT.md`.
+
+## Assignment 3 - Spark MLlib Land-Cover Classification
+
+This branch contains the completed **BDA501 Individual Assignment 3** pipeline. It continues from Assignment 2 and uses the official `split` column only. No `randomSplit`, `CrossValidator` default folds, or `TrainValidationSplit` default random folds are used.
+
+### Assignment 3 run commands
+
+PowerShell, from the repo root:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\05_a3_features_v2.py --partitions 16
+.\.venv\Scripts\python.exe scripts\06_a3_multiclass.py
+.\.venv\Scripts\python.exe scripts\07_a3_multilabel.py
+.\.venv\Scripts\python.exe scripts\08_a3_unsupervised.py
+.\.venv\Scripts\python.exe scripts\09_a3_scalability_deploy.py
+.\.venv\Scripts\python.exe scripts\write_a3_report.py
+.\.venv\Scripts\python.exe scripts\plot_a3_scalability.py
+.\.venv\Scripts\python.exe scripts\render_a3_report_pdf.py
+```
+
+### Assignment 3 outputs
+
+| Output | Purpose |
+|---|---|
+| `hdfs_mirror/bigearthnet/features_v2/` | richer Step 1 feature table |
+| `hdfs_mirror/bigearthnet/models/a3_best_pipeline_model/` | saved best PipelineModel |
+| `hdfs_mirror/bigearthnet/predictions/` | held-out-country batch predictions partitioned by country |
+| `reports/a3_final_report.pdf` | final 5-page PDF report for submission |
+| `reports/a3_final_report.md` | editable report source |
+| `reports/a3_requirement_audit.md` | requirement-by-requirement checkpoint |
+| `reports/a3_step*.json` | raw evidence for each step |
+| `reports/figures/a3_pca_scatter.png` | PCA plot |
+| `reports/figures/a3_scalability.png` | scaling plot |
+
+### Assignment 3 reproducibility notes
+
+- Fixed random seed is configured in `scripts/a3_config.py`.
+- Shared Spark ML helpers are in `scripts/a3_ml_utils.py`.
+- Local Windows Spark uses `.hadoop/bin/winutils.exe` and `.hadoop/bin/hadoop.dll` for local Parquet/model writes.
+- The partial dataset contains 52,607 patches across 4 countries. It has 18 of 19 labels available, so the scripts request 35 frequent classes but transparently report the usable classes/counts in the JSON evidence and final report.
+
+### Assignment 3 submission
+
+Submit:
+
+1. Code ZIP downloaded from GitHub branch `assignment-3-work`.
+2. `reports/a3_final_report.pdf`.
+3. Optional supporting evidence: `reports/a3_requirement_audit.md`, `reports/a3_step*.json`, and the two `reports/figures/a3_*.png` images.

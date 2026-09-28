@@ -1,0 +1,104 @@
+{
+  "step": "A3-Step4",
+  "pca": {
+    "explained_variance": [
+      0.7207762275281089,
+      0.12275178094912123
+    ],
+    "plot": "C:\\Users\\DELL\\Documents\\Bigdata-Lab\\Lab2-Bigdata\\reports\\figures\\a3_pca_scatter.png"
+  },
+  "kmeans": {
+    "k_grid": [
+      {
+        "k": 3,
+        "silhouette": 0.7889433615102165
+      },
+      {
+        "k": 4,
+        "silhouette": 0.7825768871703909
+      },
+      {
+        "k": 5,
+        "silhouette": 0.6733891971136118
+      },
+      {
+        "k": 6,
+        "silhouette": 0.529752132793698
+      },
+      {
+        "k": 7,
+        "silhouette": 0.4150401930196403
+      },
+      {
+        "k": 8,
+        "silhouette": 0.4941751967184488
+      },
+      {
+        "k": 9,
+        "silhouette": 0.5033023506886117
+      },
+      {
+        "k": 10,
+        "silhouette": 0.5461918361516789
+      }
+    ],
+    "best_k": {
+      "k": 3,
+      "silhouette": 0.7889433615102165
+    },
+    "cluster_class_contingency": [
+      {
+        "prediction": 0,
+        "Arable land": 0,
+        "Broad-leaved forest": 0,
+        "Complex cultivation patterns": 0,
+        "Coniferous forest": 3,
+        "Inland waters": 108,
+        "Inland wetlands": 9,
+        "Land principally occupied by agriculture, with significant areas of natural vegetation": 0,
+        "Marine waters": 5841,
+        "Mixed forest": 0,
+        "Moors, heathland and sclerophyllous vegetation": 0,
+        "Natural grassland and sparsely vegetated areas": 0,
+        "Pastures": 0,
+        "Permanent crops": 0,
+        "Urban fabric": 0
+      },
+      {
+        "prediction": 1,
+        "Arable land": 1061,
+        "Broad-leaved forest": 2,
+        "Complex cultivation patterns": 1,
+        "Coniferous forest": 0,
+        "Inland waters": 0,
+        "Inland wetlands": 36,
+        "Land principally occupied by agriculture, with significant areas of natural vegetation": 0,
+        "Marine waters": 46,
+        "Mixed forest": 0,
+        "Moors, heathland and sclerophyllous vegetation": 4,
+        "Natural grassland and sparsely vegetated areas": 1,
+        "Pastures": 59,
+        "Permanent crops": 1,
+        "Urban fabric": 35
+      },
+      {
+        "prediction": 2,
+        "Arable land": 97,
+        "Broad-leaved forest": 144,
+        "Complex cultivation patterns": 1,
+        "Coniferous forest": 18,
+        "Inland waters": 0,
+        "Inland wetlands": 111,
+        "Land principally occupied by agriculture, with significant areas of natural vegetation": 1,
+        "Marine waters": 1,
+        "Mixed forest": 9,
+        "Moors, heathland and sclerophyllous vegetation": 5,
+        "Natural grassland and sparsely vegetated areas": 3,
+        "Pastures": 3340,
+        "Permanent crops": 2,
+        "Urban fabric": 2
+      }
+    ]
+  },
+  "discussion": "Clusters are expected to partially match broad vegetation/water/built-up gradients, not exact land-cover classes, because patch-level spectral summaries lose spatial texture and many labels co-occur."
+}
