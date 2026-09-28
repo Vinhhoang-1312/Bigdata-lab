@@ -1,87 +1,60 @@
-﻿# BDA501 Individual Assignment 3 Report
+# BDA501 - Big Data Analytics
 
-Land-Cover Classification at Scale with Spark MLlib.
+## Individual Assignment 3
+
+**Land-Cover Classification at Scale with Apache Spark MLlib**
+
+**Student:** Tran Phan Vinh Hoang
+
+**Date:** 28 September 2026
+
+## Abstract
+
+This report processes 52,607 BigEarthNet-S2 patches from 4 countries with the official split. Random Forest reached test accuracy 0.958, weighted-F1 0.955, and macro-F1 0.511. Multi-label micro-F1 was 0.627. PCA, KMeans, scaling, persistence and held-out-country inference are also evaluated.
 
 ## 1. Environment and data
 
-- Platform: Windows local Spark / PySpark MLlib, local HDFS mirror `hdfs_mirror/bigearthnet`.
-- Dataset source: BigEarthNet HDF5 partial data from Assignment 2.
-- Rows used: 52,607 patches across 4 countries.
-- Official split counts: {'train': 25291, 'validation': 13884, 'test': 13432}.
-- No random split or random-fold cross-validation was used; train/validation/test columns are preserved.
-- AI assistance: OpenAI Codex helped implement and verify scripts; all code/results are reproducible from this repo.
+Local Spark/PySpark MLlib processed 52,607 patches. Split counts were 25,291 train, 13,884 validation and 13,432 test. No random split or random-fold tuning was used.
 
-## 2. Step 1: Richer features
+## 2. Richer features
 
-Features v2 saved to `file:///C:/Users/DELL/Documents/Bigdata-Lab/Lab2-Bigdata/hdfs_mirror/bigearthnet/features_v2`.
-Final feature count: 28.
-The new 20 m bands B05, B06, B07, B8A, B11 and B12 are processed on their own 60 x 60 grid. NDMI, NDBI, and NDVI p10/p50/p90 are computed per patch.
-Validation: 0 feature errors; null counts and NaN counts are all zero; index range failures: {'ndvi': 0, 'ndwi': 0, 'ndmi': 0, 'ndbi': 0, 'ndvi_p10': 0, 'ndvi_p50': 0, 'ndvi_p90': 0}.
+Features v2 contains 28 columns with 0 errors, no null/NaN values and no range failures. New columns include six 20 m band means/std values, NDMI, NDBI and NDVI p10/p50/p90.
 
-## 3. Step 2: Multi-class classification
+## 3. Multi-class classification
 
-Selected frequent classes from train: 18 available classes in this subset.
-The pipeline for every model is `StringIndexer -> VectorAssembler -> StandardScaler -> classifier`, with inverse-frequency `weightCol` from train only.
-Validation tuning results:
+### Model selection and validation
 
-| Model | Best config | Validation macro-F1 | Train time (s) |
-|---|---:|---:|---:|
-| lr | `{'regParam': 0.0, 'elasticNetParam': 0.0}` | 0.735 | 20.537 |
-| rf | `{'numTrees': 40, 'maxDepth': 8}` | 0.845 | 5.544 |
-| gbt_ovr | `{'maxIter': 10, 'maxDepth': 3}` | 0.767 | 83.295 |
+The pipeline is StringIndexer -> VectorAssembler -> StandardScaler -> classifier with train-only inverse-frequency weights.
 
-Best model: `rf`. Test accuracy=0.958, weighted-F1=0.955, macro-F1=0.511.
-Assignment 2 baselines are included in `reports/a3_step2_multiclass.json` for comparison.
-Top RF features include: ndvi_p10, mean_b11, mean_b12, brightness, mean_b03, ndwi, mean_b08, mean_b8a, ndvi_p90, mean_b06.
-Top-k retraining summary:
+| Model | Best validation macro-F1 | Best configuration |
+|---|---:|---|
+| lr | 0.735 | {'regParam': 0.0, 'elasticNetParam': 0.0} |
+| rf | 0.845 | {'numTrees': 40, 'maxDepth': 8} |
+| gbt_ovr | 0.767 | {'maxIter': 10, 'maxDepth': 3} |
 
-| k | Test accuracy | Macro-F1 | Weighted-F1 |
-|---:|---:|---:|---:|
-| 5 | 0.793 | 0.439 | 0.861 |
-| 10 | 0.815 | 0.443 | 0.881 |
+### Assignment 2 baselines
 
-## 4. Step 3: Multi-label classification
+The selected RF test result was accuracy 0.958, weighted-F1 0.955, and macro-F1 0.511. A2 majority, spectral-rule and nearest-centroid baselines are compared in the PDF; they use a smaller three-class task.
 
-All 19 CORINE labels are encoded as binary columns. One Logistic Regression binary classifier is trained per class using one train-fitted feature-preparation PipelineModel. Thresholds are selected on validation only.
-Test micro-F1=0.627; macro-F1=0.397.
-Marine waters and Pastures are strongest; rare or visually mixed classes such as Coastal wetlands, Beaches/dunes/sands, and Industrial/commercial units are weak from patch-level summaries.
+## 4. Multi-label classification
 
-## 5. Step 4: Unsupervised analysis
+Nineteen binary classifiers with validation-tuned thresholds reached micro-F1 0.627 and macro-F1 0.397.
 
-PCA explained variance for PC1/PC2: [0.7208, 0.1228].
-PCA plot: `C:\Users\DELL\Documents\Bigdata-Lab\Lab2-Bigdata\reports\figures\a3_pca_scatter.png`.
-Best KMeans k by silhouette: 3 with silhouette=0.789.
-The contingency table shows one cluster dominated by Marine waters and others mostly vegetation/agriculture; clusters do not perfectly match land-cover classes because labels are multi-label and features lose spatial texture.
+## 5. Unsupervised analysis
 
-## 6. Step 5: Scalability and deployment
+PC1/PC2 explained 72.1% and 12.3%. KMeans selected k=3 with silhouette 0.789.
 
-Scaling experiments used stratified `sampleBy`, two partition counts, and caching. Plot: `reports/figures/a3_scalability.png`.
+## 6. Scalability and deployment
 
-| Train fraction | Partitions | Train rows | Time (s) | Test macro-F1 |
-|---:|---:|---:|---:|---:|
-| 0.25 | 4 | 1567 | 8.763 | 0.507 |
-| 0.25 | 8 | 1567 | 5.01 | 0.515 |
-| 0.5 | 4 | 3240 | 5.793 | 0.547 |
-| 0.5 | 8 | 3240 | 5.261 | 0.538 |
-| 1.0 | 4 | 6567 | 4.139 | 0.626 |
-| 1.0 | 8 | 6567 | 5.42 | 0.585 |
+The best model was trained on 25%, 50% and 100% samples with 4 and 8 partitions. The saved PipelineModel reproduced test metrics exactly.
+Held-out Lithuania accuracy was 0.955; macro-F1 was 0.513.
 
-Model saved to `file:///C:/Users/DELL/Documents/Bigdata-Lab/Lab2-Bigdata/hdfs_mirror/bigearthnet/models/a3_best_pipeline_model` and reloaded metrics matched exactly: `True`.
-Batch predictions saved to `file:///C:/Users/DELL/Documents/Bigdata-Lab/Lab2-Bigdata/hdfs_mirror/bigearthnet/predictions` partitioned by country.
-Held-out country `Lithuania` accuracy=0.955, macro-F1=0.513.
+## 7. Discussion and limitations
 
-## 7. Reproducibility commands
+The partial data contains 18 of 19 labels and only 13 exact-one training classes. Patch statistics lose spatial texture. Results use local Spark and an HDFS mirror.
 
-```powershell
-.\.venv\Scripts\python.exe scripts\05_a3_features_v2.py --partitions 16
-.\.venv\Scripts\python.exe scripts\06_a3_multiclass.py
-.\.venv\Scripts\python.exe scripts\07_a3_multilabel.py
-.\.venv\Scripts\python.exe scripts\08_a3_unsupervised.py
-.\.venv\Scripts\python.exe scripts\09_a3_scalability_deploy.py
-```
+## 8. Conclusion
 
-## 8. Limitation / deviation notes
+All five required MLlib stages are implemented with fixed seeds, official splits and reproducible JSON evidence.
 
-- The provided partial dataset contains 18 of 19 class labels and the single-label top-class task has fewer than 35 usable exact-one frequent classes. The scripts request 35 but transparently report the available classes/counts.
-- Windows local Spark required local Hadoop native helpers (`winutils.exe`, `hadoop.dll`) for Parquet writes.
-
+**AI assistance statement.** OpenAI Codex helped implement, verify and present the project; all numerical results come from submitted artifacts.
